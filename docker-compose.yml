@@ -16,7 +16,7 @@ services:
     volumes:
       - sqlite_data:/data
     networks:
-      - looma-external
+      - proxy_network
     restart: unless-stopped
 
   web:
@@ -24,12 +24,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     networks:
-      - looma-external
+      - proxy_network
     restart: unless-stopped
 
 volumes:
   sqlite_data:
 
 networks:
-  looma-external:
+  proxy_network:
     external: true
