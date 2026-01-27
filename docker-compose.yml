@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - APP_ENV=prod
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-super-secret-key-change-in-production}
+      - DATABASE_URL=sqlite+aiosqlite:////data/app.db
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
+      - SEED_ADMIN_USERS=true
+      - SEED_USER_1_USERNAME=${SEED_USER_1_USERNAME:-alice}
+      - SEED_USER_1_PASSWORD=${SEED_USER_1_PASSWORD:-password123}
+      - SEED_USER_2_USERNAME=${SEED_USER_2_USERNAME:-bob}
+      - SEED_USER_2_PASSWORD=${SEED_USER_2_PASSWORD:-password123}
+    volumes:
+      - sqlite_data:/data
+    networks:
+      - looma-external
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks:
+      - looma-external
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+
+networks:
+  looma-external:
+    external: true

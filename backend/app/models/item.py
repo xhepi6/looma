@@ -1,0 +1,32 @@
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Text, Enum, JSON
+from sqlalchemy.sql import func
+from app.db.engine import Base
+import enum
+
+
+class ItemStatus(str, enum.Enum):
+    TODO = "todo"
+    DONE = "done"
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    board_id = Column(Integer, ForeignKey("boards.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(500), nullable=False)
+    notes = Column(Text, nullable=True)
+    status = Column(Enum(ItemStatus), default=ItemStatus.TODO, nullable=False)
+    due_at = Column(DateTime(timezone=True), nullable=True)
+    position = Column(Float, default=0.0, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    last_edited_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Reminder tracking
+    reminded_due_window = Column(String(20), nullable=True)
+    reminded_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Labels
+    labels = Column(JSON, default=list, nullable=False)
