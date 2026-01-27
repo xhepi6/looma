@@ -18,8 +18,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add priority column to items table with default 'medium'
-    op.add_column('items', sa.Column('priority', sa.String(20), nullable=False, server_default='medium'))
+    # Add priority column to items table with default 'MEDIUM' (SQLAlchemy Enum uses member names)
+    op.add_column('items', sa.Column('priority', sa.String(20), nullable=False, server_default='MEDIUM'))
 
 
 def downgrade() -> None:
