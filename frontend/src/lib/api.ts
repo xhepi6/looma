@@ -12,12 +12,15 @@ export interface Board {
   is_default: boolean
 }
 
+export type ItemPriority = 'low' | 'medium' | 'high'
+
 export interface Item {
   id: number
   board_id: number
   title: string
   notes: string | null
   status: 'todo' | 'done'
+  priority: ItemPriority
   due_at: string | null
   position: number
   created_at: string
@@ -69,13 +72,13 @@ export const getBoard = (id: number) => fetchApi<Board>(`/boards/${id}`)
 export const getItems = (boardId: number) =>
   fetchApi<Item[]>(`/boards/${boardId}/items`)
 
-export const createItem = (boardId: number, data: { title: string; notes?: string; due_at?: string }) =>
+export const createItem = (boardId: number, data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority }) =>
   fetchApi<Item>(`/boards/${boardId}/items`, {
     method: 'POST',
     body: JSON.stringify(data),
   })
 
-export const updateItem = (itemId: number, data: Partial<Pick<Item, 'title' | 'notes' | 'status' | 'due_at' | 'position' | 'labels'>>) =>
+export const updateItem = (itemId: number, data: Partial<Pick<Item, 'title' | 'notes' | 'status' | 'priority' | 'due_at' | 'position' | 'labels'>>) =>
   fetchApi<Item>(`/items/${itemId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),

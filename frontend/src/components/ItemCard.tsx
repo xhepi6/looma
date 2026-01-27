@@ -2,16 +2,18 @@ import { motion } from 'framer-motion'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
-import type { Item } from '@/lib/api'
+import type { Item, ItemPriority } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Check, GripVertical, Trash2, RotateCcw } from 'lucide-react'
 import LabelBadge from '@/components/LabelBadge'
 import LabelInput from '@/components/LabelInput'
+import PrioritySelect from '@/components/PrioritySelect'
 
 interface ItemCardProps {
   item: Item
   onToggle: () => void
   onUpdateLabels: (labels: string[]) => void
+  onUpdatePriority: (priority: ItemPriority) => void
   onDelete: () => void
   isDraggable?: boolean
   allLabels?: string[]
@@ -21,6 +23,7 @@ export default function ItemCard({
   item,
   onToggle,
   onUpdateLabels,
+  onUpdatePriority,
   onDelete,
   isDraggable = true,
   allLabels = [],
@@ -66,6 +69,12 @@ export default function ItemCard({
           <GripVertical className="h-4 w-4" />
         </button>
       )}
+
+      {/* Priority selector */}
+      <PrioritySelect
+        value={item.priority || 'medium'}
+        onChange={onUpdatePriority}
+      />
 
       {/* Toggle button */}
       <Button

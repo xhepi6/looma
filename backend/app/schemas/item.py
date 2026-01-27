@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List
-from app.models.item import ItemStatus
+from app.models.item import ItemStatus, ItemPriority
 
 
 class ItemCreate(BaseModel):
@@ -9,6 +9,7 @@ class ItemCreate(BaseModel):
     notes: Optional[str] = None
     due_at: Optional[datetime] = None
     labels: List[str] = Field(default_factory=list)
+    priority: ItemPriority = ItemPriority.MEDIUM
 
 
 class ItemUpdate(BaseModel):
@@ -18,6 +19,7 @@ class ItemUpdate(BaseModel):
     due_at: Optional[datetime] = None
     position: Optional[float] = None
     labels: Optional[List[str]] = None
+    priority: Optional[ItemPriority] = None
 
 
 class ItemResponse(BaseModel):
@@ -26,6 +28,7 @@ class ItemResponse(BaseModel):
     title: str
     notes: Optional[str] = None
     status: ItemStatus
+    priority: ItemPriority = ItemPriority.MEDIUM
     due_at: Optional[datetime] = None
     position: float
     created_at: Optional[datetime] = None

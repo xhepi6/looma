@@ -173,6 +173,10 @@ export default function BoardPage() {
     updateItemMutation.mutate({ id, data: { labels } })
   }
 
+  const handleUpdatePriority = (id: number, priority: api.ItemPriority) => {
+    updateItemMutation.mutate({ id, data: { priority } })
+  }
+
   const handleLabelFilter = (label: string) => {
     setSelectedLabel(selectedLabel === label ? null : label)
   }
@@ -279,6 +283,7 @@ export default function BoardPage() {
                       item={item}
                       onToggle={() => handleToggleStatus(item)}
                       onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
+                      onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
                       onDelete={() => handleDelete(item.id)}
                       allLabels={allLabels}
                     />
@@ -327,6 +332,7 @@ export default function BoardPage() {
                       item={item}
                       onToggle={() => handleToggleStatus(item)}
                       onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
+                      onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
                       onDelete={() => handleDelete(item.id)}
                       isDraggable={false}
                       allLabels={allLabels}

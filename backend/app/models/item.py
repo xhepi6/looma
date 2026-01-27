@@ -9,6 +9,12 @@ class ItemStatus(str, enum.Enum):
     DONE = "done"
 
 
+class ItemPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class Item(Base):
     __tablename__ = "items"
 
@@ -17,6 +23,7 @@ class Item(Base):
     title = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
     status = Column(Enum(ItemStatus), default=ItemStatus.TODO, nullable=False)
+    priority = Column(Enum(ItemPriority), default=ItemPriority.MEDIUM, nullable=False)
     due_at = Column(DateTime(timezone=True), nullable=True)
     position = Column(Float, default=0.0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
