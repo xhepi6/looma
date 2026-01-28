@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
@@ -11,9 +11,16 @@ import { Input } from '@/components/ui/input'
 import { toast } from '@/components/ui/toaster'
 import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest'
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'priority', label: 'Priority' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+]
 
 const PRIORITY_ORDER: Record<string, number> = {
   HIGH: 0,
@@ -36,6 +43,20 @@ export default function BoardPage() {
   const [showDone, setShowDone] = useState(false)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('priority')
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false)
+  const sortDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false)
+      }
+    }
+    if (sortDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [sortDropdownOpen])
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['items', boardIdNum],
@@ -244,17 +265,37 @@ export default function BoardPage() {
               <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
               Todo ({todoItems.length})
             </h2>
-            <div className="flex items-center gap-1">
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="text-sm bg-transparent border-none text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <option value="priority">Priority</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-              </select>
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <span>{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', sortDropdownOpen && 'rotate-180')} />
+              </button>
+              {sortDropdownOpen && (
+                <div className="absolute z-50 mt-1 right-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[100px]">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value)
+                        setSortDropdownOpen(false)
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm',
+                        'text-gray-700 dark:text-gray-200',
+                        'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                        sortBy === option.value && 'bg-gray-50 dark:bg-gray-800'
+                      )}
+                    >
+                      <span>{option.label}</span>
+                      {sortBy === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="space-y-2">
