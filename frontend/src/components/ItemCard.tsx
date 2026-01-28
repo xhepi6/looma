@@ -1,10 +1,8 @@
 import { motion } from 'framer-motion'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import type { Item, ItemPriority } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Check, GripVertical, Trash2, RotateCcw } from 'lucide-react'
+import { Check, Trash2, RotateCcw } from 'lucide-react'
 import LabelBadge from '@/components/LabelBadge'
 import LabelInput from '@/components/LabelInput'
 import PrioritySelect from '@/components/PrioritySelect'
@@ -15,7 +13,6 @@ interface ItemCardProps {
   onUpdateLabels: (labels: string[]) => void
   onUpdatePriority: (priority: ItemPriority) => void
   onDelete: () => void
-  isDraggable?: boolean
   allLabels?: string[]
 }
 
@@ -25,51 +22,21 @@ export default function ItemCard({
   onUpdateLabels,
   onUpdatePriority,
   onDelete,
-  isDraggable = true,
   allLabels = [],
 }: ItemCardProps) {
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id, disabled: !isDraggable })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
   const isDone = item.status === 'done'
 
   return (
     <motion.div
-      ref={setNodeRef}
-      style={style}
       layout
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
       className={cn(
         'group flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border shadow-sm transition-shadow',
-        isDragging && 'shadow-lg ring-2 ring-primary/20',
         isDone && 'opacity-60'
       )}
     >
-      {/* Drag handle */}
-      {isDraggable && (
-        <button
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      )}
-
       {/* Priority selector */}
       <PrioritySelect
         value={item.priority || 'medium'}

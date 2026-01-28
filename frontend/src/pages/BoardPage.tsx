@@ -1,22 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+import { AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { useBoardSocket } from '@/hooks/useBoardSocket'
 import { useTheme } from '@/hooks/useTheme'
@@ -26,7 +11,18 @@ import { Input } from '@/components/ui/input'
 import { toast } from '@/components/ui/toaster'
 import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon } from 'lucide-react'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown } from 'lucide-react'
+
+type SortOption = 'priority' | 'newest' | 'oldest'
+
+const PRIORITY_ORDER: Record<string, number> = {
+  HIGH: 0,
+  MEDIUM: 1,
+  LOW: 2,
+  high: 0,
+  medium: 1,
+  low: 2,
+}
 
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
@@ -39,6 +35,7 @@ export default function BoardPage() {
   const [newItemTitle, setNewItemTitle] = useState('')
   const [showDone, setShowDone] = useState(false)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<SortOption>('priority')
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['items', boardIdNum],
@@ -97,11 +94,6 @@ export default function BoardPage() {
     },
   })
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
   // Compute all unique labels from all items
   const allLabels = [...new Set(items.flatMap((item) => item.labels || []))]
 
@@ -110,46 +102,31 @@ export default function BoardPage() {
     ? items.filter((item) => item.labels?.includes(selectedLabel))
     : items
 
-  // Sort by created_at descending (newest first)
-  const sortByNewest = (a: api.Item, b: api.Item) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  // Sort function based on selected option
+  const sortItems = (a: api.Item, b: api.Item) => {
+    switch (sortBy) {
+      case 'priority': {
+        const priorityA = PRIORITY_ORDER[a.priority] ?? 1
+        const priorityB = PRIORITY_ORDER[b.priority] ?? 1
+        if (priorityA !== priorityB) return priorityA - priorityB
+        // Secondary sort by newest
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+      case 'newest':
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      case 'oldest':
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      default:
+        return 0
+    }
+  }
 
   const todoItems = filteredItems
     .filter((item) => item.status === 'todo')
-    .sort(sortByNewest)
+    .sort(sortItems)
   const doneItems = filteredItems
     .filter((item) => item.status === 'done')
-    .sort(sortByNewest)
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      const oldIndex = todoItems.findIndex((item) => item.id === active.id)
-      const newIndex = todoItems.findIndex((item) => item.id === over.id)
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove(todoItems, oldIndex, newIndex)
-
-        // Calculate new position
-        let newPosition: number
-        if (newIndex === 0) {
-          newPosition = (newOrder[1]?.position || 1) - 1
-        } else if (newIndex === newOrder.length - 1) {
-          newPosition = (newOrder[newOrder.length - 2]?.position || 0) + 1
-        } else {
-          const prev = newOrder[newIndex - 1]?.position || 0
-          const next = newOrder[newIndex + 1]?.position || prev + 2
-          newPosition = (prev + next) / 2
-        }
-
-        updateItemMutation.mutate({
-          id: Number(active.id),
-          data: { position: newPosition },
-        })
-      }
-    }
-  }
+    .sort(sortItems)
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
@@ -262,43 +239,46 @@ export default function BoardPage() {
 
         {/* Todo Items */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-            Todo ({todoItems.length})
-          </h2>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={todoItems.map((item) => item.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {todoItems.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      onToggle={() => handleToggleStatus(item)}
-                      onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
-                      onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
-                      onDelete={() => handleDelete(item.id)}
-                      allLabels={allLabels}
-                    />
-                  ))}
-                </AnimatePresence>
-                {todoItems.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    {selectedLabel
-                      ? `No tasks with label "${selectedLabel}"`
-                      : 'No tasks yet. Add one above!'}
-                  </p>
-                )}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+              Todo ({todoItems.length})
+            </h2>
+            <div className="flex items-center gap-1">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="text-sm bg-transparent border-none text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="priority">Priority</option>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {todoItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onToggle={() => handleToggleStatus(item)}
+                  onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
+                  onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
+                  onDelete={() => handleDelete(item.id)}
+                  allLabels={allLabels}
+                />
+              ))}
+            </AnimatePresence>
+            {todoItems.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                {selectedLabel
+                  ? `No tasks with label "${selectedLabel}"`
+                  : 'No tasks yet. Add one above!'}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Done Items Toggle */}
@@ -321,23 +301,15 @@ export default function BoardPage() {
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
                 {doneItems.map((item) => (
-                  <motion.div
+                  <ItemCard
                     key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                  >
-                    <ItemCard
-                      item={item}
-                      onToggle={() => handleToggleStatus(item)}
-                      onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
-                      onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
-                      onDelete={() => handleDelete(item.id)}
-                      isDraggable={false}
-                      allLabels={allLabels}
-                    />
-                  </motion.div>
+                    item={item}
+                    onToggle={() => handleToggleStatus(item)}
+                    onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
+                    onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
+                    onDelete={() => handleDelete(item.id)}
+                    allLabels={allLabels}
+                  />
                 ))}
               </AnimatePresence>
               {doneItems.length === 0 && (
