@@ -15,5 +15,9 @@ RUN mkdir -p /app/data
 # Expose port
 EXPOSE 8001
 
+# Copy and set entrypoint
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["./entrypoint.sh"]
