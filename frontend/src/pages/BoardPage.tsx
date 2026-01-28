@@ -11,7 +11,9 @@ import { toast } from '@/components/ui/toaster'
 import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search } from 'lucide-react'
+import CalendarPicker from '@/components/ui/calendar'
+import { format } from 'date-fns'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest' | 'due-date'
 
@@ -39,7 +41,9 @@ export default function BoardPage() {
   const { resolvedTheme, setTheme } = useTheme()
 
   const [newItemTitle, setNewItemTitle] = useState('')
-  const [newItemDueDate, setNewItemDueDate] = useState('')
+  const [newItemDueDate, setNewItemDueDate] = useState<Date | null>(null)
+  const [dueDatePickerOpen, setDueDatePickerOpen] = useState(false)
+  const dueDatePickerRef = useRef<HTMLDivElement>(null)
   const [showDone, setShowDone] = useState(false)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('priority')
@@ -59,6 +63,18 @@ export default function BoardPage() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [sortDropdownOpen])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dueDatePickerRef.current && !dueDatePickerRef.current.contains(event.target as Node)) {
+        setDueDatePickerOpen(false)
+      }
+    }
+    if (dueDatePickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dueDatePickerOpen])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,7 +112,7 @@ export default function BoardPage() {
         queryClient.invalidateQueries({ queryKey: ['items', boardId] })
       }
       setNewItemTitle('')
-      setNewItemDueDate('')
+      setNewItemDueDate(null)
     },
     onError: () => {
       toast({ title: 'Failed to create item', variant: 'destructive' })
@@ -195,7 +211,8 @@ export default function BoardPage() {
     if (newItemTitle.trim()) {
       const data: { title: string; due_at?: string } = { title: newItemTitle.trim() }
       if (newItemDueDate) {
-        data.due_at = new Date(newItemDueDate + 'T12:00:00Z').toISOString()
+        const d = newItemDueDate
+        data.due_at = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)).toISOString()
       }
       createItemMutation.mutate(data)
     }
@@ -277,13 +294,46 @@ export default function BoardPage() {
               onChange={(e) => setNewItemTitle(e.target.value)}
               className="flex-1"
             />
-            <input
-              type="date"
-              value={newItemDueDate}
-              onChange={(e) => setNewItemDueDate(e.target.value)}
-              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-foreground"
-              title="Due date (optional)"
-            />
+            <div className="relative" ref={dueDatePickerRef}>
+              <button
+                type="button"
+                onClick={() => setDueDatePickerOpen(!dueDatePickerOpen)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 h-9 text-sm border rounded-md transition-colors',
+                  'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800',
+                  newItemDueDate
+                    ? 'text-foreground'
+                    : 'text-muted-foreground'
+                )}
+                title="Due date (optional)"
+              >
+                <Calendar className="h-4 w-4" />
+                {newItemDueDate ? format(newItemDueDate, 'MMM d, yyyy') : 'Due date'}
+              </button>
+              {dueDatePickerOpen && (
+                <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-3">
+                  <CalendarPicker
+                    selected={newItemDueDate}
+                    onSelect={(date) => {
+                      setNewItemDueDate(date)
+                      setDueDatePickerOpen(false)
+                    }}
+                  />
+                  {newItemDueDate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewItemDueDate(null)
+                        setDueDatePickerOpen(false)
+                      }}
+                      className="w-full mt-2 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    >
+                      Clear date
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <Button type="submit" disabled={!newItemTitle.trim()}>
               <Plus className="h-4 w-4 mr-1" />
               Add

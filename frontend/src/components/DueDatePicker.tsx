@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatDueDate, isOverdue, isDueToday, toDateInputValue, fromDateInputValue } from '@/lib/dateUtils'
+import { formatDueDate, isOverdue, isDueToday } from '@/lib/dateUtils'
+import CalendarPicker from '@/components/ui/calendar'
+import { parseISO } from 'date-fns'
 
 interface DueDatePickerProps {
   value: string | null
@@ -35,11 +37,11 @@ export default function DueDatePicker({ value, onChange, disabled = false }: Due
     }
   }
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value) {
-      onChange(fromDateInputValue(e.target.value))
-      setIsOpen(false)
-    }
+  const handleDateSelect = (date: Date) => {
+    // noon UTC to avoid timezone edge cases
+    const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12))
+    onChange(utc.toISOString())
+    setIsOpen(false)
   }
 
   const handleClear = () => {
@@ -92,13 +94,10 @@ export default function DueDatePicker({ value, onChange, disabled = false }: Due
       )}
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-2 min-w-[180px]">
-          <input
-            type="date"
-            value={value ? toDateInputValue(value) : ''}
-            onChange={handleDateChange}
-            className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-foreground"
-            autoFocus
+        <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-3">
+          <CalendarPicker
+            selected={value ? parseISO(value) : null}
+            onSelect={handleDateSelect}
           />
           {value && (
             <button
