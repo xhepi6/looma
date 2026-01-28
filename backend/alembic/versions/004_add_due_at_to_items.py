@@ -8,6 +8,7 @@ Create Date: 2026-01-28
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from alembic.helpers import column_exists
 
 
 # revision identifiers, used by Alembic.
@@ -18,7 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('items', sa.Column('due_at', sa.DateTime(timezone=True), nullable=True))
+    if not column_exists('items', 'due_at'):
+        op.add_column('items', sa.Column('due_at', sa.DateTime(timezone=True), nullable=True))
 
 
 def downgrade() -> None:

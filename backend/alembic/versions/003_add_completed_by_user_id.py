@@ -8,6 +8,7 @@ Create Date: 2026-01-28
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from alembic.helpers import column_exists
 
 
 # revision identifiers, used by Alembic.
@@ -18,15 +19,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('items', sa.Column('completed_by_user_id', sa.Integer(), nullable=True))
-    op.create_foreign_key(
-        'fk_items_completed_by_user',
-        'items',
-        'users',
-        ['completed_by_user_id'],
-        ['id'],
-        ondelete='SET NULL'
-    )
+    if not column_exists('items', 'completed_by_user_id'):
+        op.add_column('items', sa.Column('completed_by_user_id', sa.Integer(), nullable=True))
+        op.create_foreign_key(
+            'fk_items_completed_by_user',
+            'items',
+            'users',
+            ['completed_by_user_id'],
+            ['id'],
+            ondelete='SET NULL'
+        )
 
 
 def downgrade() -> None:

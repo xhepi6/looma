@@ -8,6 +8,7 @@ Create Date: 2026-01-28
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from alembic.helpers import column_exists
 
 
 # revision identifiers, used by Alembic.
@@ -18,8 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add priority column to items table with default 'MEDIUM' (SQLAlchemy Enum uses member names)
-    op.add_column('items', sa.Column('priority', sa.String(20), nullable=False, server_default='MEDIUM'))
+    if not column_exists('items', 'priority'):
+        op.add_column('items', sa.Column('priority', sa.String(20), nullable=False, server_default='MEDIUM'))
 
 
 def downgrade() -> None:
