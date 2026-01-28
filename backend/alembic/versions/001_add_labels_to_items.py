@@ -8,7 +8,7 @@ Create Date: 2026-01-27
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from alembic.helpers import column_exists
+from migration_helpers import column_exists
 
 
 # revision identifiers, used by Alembic.
