@@ -150,6 +150,16 @@ async def update_item(
     # Update fields
     update_data = data.model_dump(exclude_unset=True)
 
+    # Prevent modifying priority/labels on completed items (only status changes allowed)
+    if item.status == ItemStatus.DONE:
+        allowed_fields = {'status'}
+        disallowed_updates = set(update_data.keys()) - allowed_fields
+        if disallowed_updates:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot modify priority, labels, or other fields on completed items. Reopen the item first."
+            )
+
     for field, value in update_data.items():
         setattr(item, field, value)
 

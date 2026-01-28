@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 interface PrioritySelectProps {
   value: ItemPriority
   onChange: (priority: ItemPriority) => void
+  disabled?: boolean
 }
 
 const priorities: ItemPriority[] = ['high', 'medium', 'low']
@@ -18,7 +19,7 @@ const priorityIcons: Record<ItemPriority, typeof ChevronDown> = {
   high: ChevronUp,
 }
 
-export default function PrioritySelect({ value, onChange }: PrioritySelectProps) {
+export default function PrioritySelect({ value, onChange, disabled = false }: PrioritySelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { resolvedTheme } = useTheme()
@@ -71,15 +72,16 @@ export default function PrioritySelect({ value, onChange }: PrioritySelectProps)
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        onKeyDown={handleKeyDown}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={disabled ? undefined : handleKeyDown}
+        disabled={disabled}
         className={cn(
           'flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium transition-all',
-          'hover:opacity-80',
+          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80',
           'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary'
         )}
         style={{ backgroundColor: currentStyle.bg, color: currentStyle.text }}
-        title={`Priority: ${getPriorityLabel(value)}`}
+        title={disabled ? `Priority: ${getPriorityLabel(value)} (locked)` : `Priority: ${getPriorityLabel(value)}`}
       >
         <CurrentIcon className="h-3 w-3" />
       </button>

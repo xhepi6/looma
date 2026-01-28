@@ -41,6 +41,7 @@ export default function ItemCard({
       <PrioritySelect
         value={item.priority || 'medium'}
         onChange={onUpdatePriority}
+        disabled={isDone}
       />
 
       {/* Toggle button */}
@@ -77,14 +78,16 @@ export default function ItemCard({
             <LabelBadge
               key={label}
               label={label}
-              onRemove={() => onUpdateLabels((item.labels || []).filter((l) => l !== label))}
+              onRemove={isDone ? undefined : () => onUpdateLabels((item.labels || []).filter((l) => l !== label))}
             />
           ))}
-          <LabelInput
-            existingLabels={item.labels || []}
-            onAddLabel={(label) => onUpdateLabels([...(item.labels || []), label])}
-            allLabels={allLabels}
-          />
+          {!isDone && (
+            <LabelInput
+              existingLabels={item.labels || []}
+              onAddLabel={(label) => onUpdateLabels([...(item.labels || []), label])}
+              allLabels={allLabels}
+            />
+          )}
         </div>
         {/* Completed by indicator */}
         {isDone && item.completed_by_username && (
