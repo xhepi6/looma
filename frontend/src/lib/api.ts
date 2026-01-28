@@ -71,11 +71,11 @@ export const getBoards = () => fetchApi<Board[]>('/boards')
 export const getBoard = (id: number) => fetchApi<Board>(`/boards/${id}`)
 
 // Items
-export const getItems = (boardId: number) =>
-  fetchApi<Item[]>(`/boards/${boardId}/items`)
+export const getItems = () =>
+  fetchApi<Item[]>(`/boards/1/items`)
 
-export const createItem = (boardId: number, data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority }) =>
-  fetchApi<Item>(`/boards/${boardId}/items`, {
+export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority }) =>
+  fetchApi<Item>(`/boards/1/items`, {
     method: 'POST',
     body: JSON.stringify(data),
   })

@@ -26,8 +26,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/board/:boardId" element={<BoardPage />} />
-              <Route path="/" element={<Navigate to="/board/1" replace />} />
+              <Route path="/board" element={<BoardPage />} />
+              <Route path="/" element={<Navigate to="/board" replace />} />
             </Routes>
             <Toaster />
           </AuthProvider>

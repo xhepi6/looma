@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.login(username, password),
     onSuccess: (data) => {
       queryClient.setQueryData(['me'], data.user)
-      navigate('/board/1')
+      navigate('/board')
     },
   })
 

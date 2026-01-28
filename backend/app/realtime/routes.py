@@ -33,7 +33,7 @@ async def get_user_from_cookie(websocket: WebSocket, db: AsyncSession) -> User |
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    board_id: int = Query(...),
+    board_id: int = Query(default=1),
     db: AsyncSession = Depends(get_db)
 ):
     """WebSocket endpoint for real-time board updates."""

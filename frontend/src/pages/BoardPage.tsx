@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
@@ -32,11 +31,10 @@ const PRIORITY_ORDER: Record<string, number> = {
 }
 
 export default function BoardPage() {
-  const { boardId } = useParams<{ boardId: string }>()
-  const boardIdNum = parseInt(boardId || '1', 10)
+  const boardId = 1
   const { logout } = useAuth()
   const queryClient = useQueryClient()
-  const { status: wsStatus } = useBoardSocket(boardIdNum)
+  const { status: wsStatus } = useBoardSocket()
   const { resolvedTheme, setTheme } = useTheme()
 
   const [newItemTitle, setNewItemTitle] = useState('')
@@ -59,17 +57,17 @@ export default function BoardPage() {
   }, [sortDropdownOpen])
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['items', boardIdNum],
-    queryFn: () => api.getItems(boardIdNum),
+    queryKey: ['items', boardId],
+    queryFn: () => api.getItems(),
   })
 
   const createItemMutation = useMutation({
-    mutationFn: (title: string) => api.createItem(boardIdNum, { title }),
+    mutationFn: (title: string) => api.createItem({ title }),
     onSuccess: () => {
       // Don't add item here - WebSocket will handle it to avoid duplicates
       // Only refetch if WebSocket is disconnected
       if (wsStatus !== 'connected') {
-        queryClient.invalidateQueries({ queryKey: ['items', boardIdNum] })
+        queryClient.invalidateQueries({ queryKey: ['items', boardId] })
       }
       setNewItemTitle('')
     },
@@ -82,16 +80,16 @@ export default function BoardPage() {
     mutationFn: ({ id, data }: { id: number; data: Parameters<typeof api.updateItem>[1] }) =>
       api.updateItem(id, data),
     onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: ['items', boardIdNum] })
-      const previous = queryClient.getQueryData<api.Item[]>(['items', boardIdNum])
-      queryClient.setQueryData<api.Item[]>(['items', boardIdNum], (old) =>
+      await queryClient.cancelQueries({ queryKey: ['items', boardId] })
+      const previous = queryClient.getQueryData<api.Item[]>(['items', boardId])
+      queryClient.setQueryData<api.Item[]>(['items', boardId], (old) =>
         old?.map((item) => (item.id === id ? { ...item, ...data } : item))
       )
       return { previous }
     },
     onError: (_, __, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['items', boardIdNum], context.previous)
+        queryClient.setQueryData(['items', boardId], context.previous)
       }
       toast({ title: 'Failed to update item', variant: 'destructive' })
     },
@@ -100,16 +98,16 @@ export default function BoardPage() {
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => api.deleteItem(id),
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['items', boardIdNum] })
-      const previous = queryClient.getQueryData<api.Item[]>(['items', boardIdNum])
-      queryClient.setQueryData<api.Item[]>(['items', boardIdNum], (old) =>
+      await queryClient.cancelQueries({ queryKey: ['items', boardId] })
+      const previous = queryClient.getQueryData<api.Item[]>(['items', boardId])
+      queryClient.setQueryData<api.Item[]>(['items', boardId], (old) =>
         old?.filter((item) => item.id !== id)
       )
       return { previous }
     },
     onError: (_, __, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['items', boardIdNum], context.previous)
+        queryClient.setQueryData(['items', boardId], context.previous)
       }
       toast({ title: 'Failed to delete item', variant: 'destructive' })
     },
