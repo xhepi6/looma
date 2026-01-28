@@ -6,12 +6,15 @@ import { Check, Trash2, RotateCcw } from 'lucide-react'
 import LabelBadge from '@/components/LabelBadge'
 import LabelInput from '@/components/LabelInput'
 import PrioritySelect from '@/components/PrioritySelect'
+import DueDatePicker from '@/components/DueDatePicker'
+import { isOverdue } from '@/lib/dateUtils'
 
 interface ItemCardProps {
   item: Item
   onToggle: () => void
   onUpdateLabels: (labels: string[]) => void
   onUpdatePriority: (priority: ItemPriority) => void
+  onUpdateDueDate: (dueAt: string | null) => void
   onDelete: () => void
   allLabels?: string[]
 }
@@ -21,6 +24,7 @@ export default function ItemCard({
   onToggle,
   onUpdateLabels,
   onUpdatePriority,
+  onUpdateDueDate,
   onDelete,
   allLabels = [],
 }: ItemCardProps) {
@@ -34,7 +38,8 @@ export default function ItemCard({
       exit={{ opacity: 0, scale: 0.9 }}
       className={cn(
         'group flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border shadow-sm transition-shadow',
-        isDone && 'opacity-60'
+        isDone && 'opacity-60',
+        isOverdue(item.due_at) && !isDone && 'border-l-4 border-l-red-500'
       )}
     >
       {/* Priority selector */}
@@ -88,6 +93,11 @@ export default function ItemCard({
               allLabels={allLabels}
             />
           )}
+          <DueDatePicker
+            value={item.due_at}
+            onChange={onUpdateDueDate}
+            disabled={isDone}
+          />
         </div>
         {/* Completed by indicator */}
         {isDone && item.completed_by_username && (

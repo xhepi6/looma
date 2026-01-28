@@ -152,7 +152,7 @@ async def update_item(
 
     # Prevent modifying priority/labels on completed items (only status changes allowed)
     if item.status == ItemStatus.DONE:
-        allowed_fields = {'status'}
+        allowed_fields = {'status', 'due_at'}
         disallowed_updates = set(update_data.keys()) - allowed_fields
         if disallowed_updates:
             raise HTTPException(

@@ -13,10 +13,11 @@ import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
 import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search } from 'lucide-react'
 
-type SortOption = 'priority' | 'newest' | 'oldest'
+type SortOption = 'priority' | 'newest' | 'oldest' | 'due-date'
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'priority', label: 'Priority' },
+  { value: 'due-date', label: 'Due Date' },
   { value: 'newest', label: 'Newest' },
   { value: 'oldest', label: 'Oldest' },
 ]
@@ -38,6 +39,7 @@ export default function BoardPage() {
   const { resolvedTheme, setTheme } = useTheme()
 
   const [newItemTitle, setNewItemTitle] = useState('')
+  const [newItemDueDate, setNewItemDueDate] = useState('')
   const [showDone, setShowDone] = useState(false)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('priority')
@@ -86,7 +88,7 @@ export default function BoardPage() {
   })
 
   const createItemMutation = useMutation({
-    mutationFn: (title: string) => api.createItem({ title }),
+    mutationFn: (data: { title: string; due_at?: string }) => api.createItem(data),
     onSuccess: () => {
       // Don't add item here - WebSocket will handle it to avoid duplicates
       // Only refetch if WebSocket is disconnected
@@ -94,6 +96,7 @@ export default function BoardPage() {
         queryClient.invalidateQueries({ queryKey: ['items', boardId] })
       }
       setNewItemTitle('')
+      setNewItemDueDate('')
     },
     onError: () => {
       toast({ title: 'Failed to create item', variant: 'destructive' })
@@ -166,6 +169,13 @@ export default function BoardPage() {
       }
       case 'newest':
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      case 'due-date': {
+        // Items with no due date go to bottom, otherwise ascending
+        if (!a.due_at && !b.due_at) return 0
+        if (!a.due_at) return 1
+        if (!b.due_at) return -1
+        return new Date(a.due_at).getTime() - new Date(b.due_at).getTime()
+      }
       case 'oldest':
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       default:
@@ -183,7 +193,11 @@ export default function BoardPage() {
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (newItemTitle.trim()) {
-      createItemMutation.mutate(newItemTitle.trim())
+      const data: { title: string; due_at?: string } = { title: newItemTitle.trim() }
+      if (newItemDueDate) {
+        data.due_at = new Date(newItemDueDate + 'T12:00:00Z').toISOString()
+      }
+      createItemMutation.mutate(data)
     }
   }
 
@@ -204,6 +218,10 @@ export default function BoardPage() {
 
   const handleUpdatePriority = (id: number, priority: api.ItemPriority) => {
     updateItemMutation.mutate({ id, data: { priority } })
+  }
+
+  const handleUpdateDueDate = (id: number, dueAt: string | null) => {
+    updateItemMutation.mutate({ id, data: { due_at: dueAt } })
   }
 
   const handleLabelFilter = (label: string) => {
@@ -258,6 +276,13 @@ export default function BoardPage() {
               value={newItemTitle}
               onChange={(e) => setNewItemTitle(e.target.value)}
               className="flex-1"
+            />
+            <input
+              type="date"
+              value={newItemDueDate}
+              onChange={(e) => setNewItemDueDate(e.target.value)}
+              className="px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-foreground"
+              title="Due date (optional)"
             />
             <Button type="submit" disabled={!newItemTitle.trim()}>
               <Plus className="h-4 w-4 mr-1" />
@@ -364,6 +389,7 @@ export default function BoardPage() {
                   onToggle={() => handleToggleStatus(item)}
                   onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
                   onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
+                  onUpdateDueDate={(dueAt) => handleUpdateDueDate(item.id, dueAt)}
                   onDelete={() => handleDelete(item.id)}
                   allLabels={allLabels}
                 />
@@ -407,6 +433,7 @@ export default function BoardPage() {
                     onToggle={() => handleToggleStatus(item)}
                     onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
                     onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
+                    onUpdateDueDate={(dueAt) => handleUpdateDueDate(item.id, dueAt)}
                     onDelete={() => handleDelete(item.id)}
                     allLabels={allLabels}
                   />
