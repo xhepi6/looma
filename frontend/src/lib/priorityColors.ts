@@ -11,20 +11,20 @@ const priorityStyles: Record<ItemPriority, PriorityStyle> = {
   low: {
     bg: 'hsl(210, 40%, 92%)',
     text: 'hsl(210, 40%, 35%)',
-    darkBg: 'hsl(210, 30%, 25%)',
-    darkText: 'hsl(210, 40%, 75%)',
+    darkBg: 'hsl(210, 50%, 32%)',
+    darkText: 'hsl(210, 60%, 85%)',
   },
   medium: {
     bg: 'hsl(45, 90%, 88%)',
     text: 'hsl(40, 80%, 30%)',
-    darkBg: 'hsl(40, 50%, 25%)',
-    darkText: 'hsl(45, 90%, 75%)',
+    darkBg: 'hsl(40, 70%, 32%)',
+    darkText: 'hsl(45, 100%, 85%)',
   },
   high: {
     bg: 'hsl(0, 85%, 92%)',
     text: 'hsl(0, 70%, 35%)',
-    darkBg: 'hsl(0, 50%, 25%)',
-    darkText: 'hsl(0, 85%, 75%)',
+    darkBg: 'hsl(0, 65%, 35%)',
+    darkText: 'hsl(0, 100%, 88%)',
   },
 }
 
