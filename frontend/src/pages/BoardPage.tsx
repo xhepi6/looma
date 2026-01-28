@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/toaster'
 import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle } from 'lucide-react'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest'
 
@@ -41,7 +41,9 @@ export default function BoardPage() {
   const [showDone, setShowDone] = useState(false)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('priority')
+  const [searchQuery, setSearchQuery] = useState('')
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const sortDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,6 +57,28 @@ export default function BoardPage() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [sortDropdownOpen])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+      if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
+        setSearchQuery('')
+        searchInputRef.current?.blur()
+        return
+      }
+
+      if (isInput) return
+
+      if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['items', boardId],
@@ -116,10 +140,19 @@ export default function BoardPage() {
   // Compute all unique labels from all items
   const allLabels = [...new Set(items.flatMap((item) => item.labels || []))]
 
-  // Filter items by selected label
-  const filteredItems = selectedLabel
-    ? items.filter((item) => item.labels?.includes(selectedLabel))
+  // Filter items by search query, then by selected label
+  const searchLower = searchQuery.toLowerCase()
+  const searchedItems = searchQuery
+    ? items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(searchLower) ||
+          (item.notes && item.notes.toLowerCase().includes(searchLower))
+      )
     : items
+
+  const filteredItems = selectedLabel
+    ? searchedItems.filter((item) => item.labels?.includes(selectedLabel))
+    : searchedItems
 
   // Sort function based on selected option
   const sortItems = (a: api.Item, b: api.Item) => {
@@ -233,6 +266,63 @@ export default function BoardPage() {
           </div>
         </form>
 
+        {/* Search & Sort Bar */}
+        <div className="mb-6 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search tasks... (press / to focus)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  searchInputRef.current?.focus()
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span>{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', sortDropdownOpen && 'rotate-180')} />
+            </button>
+            {sortDropdownOpen && (
+              <div className="absolute z-50 mt-1 right-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[100px]">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value)
+                      setSortDropdownOpen(false)
+                    }}
+                    className={cn(
+                      'w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm',
+                      'text-gray-700 dark:text-gray-200',
+                      'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                      sortBy === option.value && 'bg-gray-50 dark:bg-gray-800'
+                    )}
+                  >
+                    <span>{option.label}</span>
+                    {sortBy === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Label Filter Bar */}
         {allLabels.length > 0 && (
           <div className="mb-6 flex flex-wrap items-center gap-2" data-testid="label-filter-bar">
@@ -261,44 +351,10 @@ export default function BoardPage() {
 
         {/* Todo Items */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-              Todo ({todoItems.length})
-            </h2>
-            <div className="relative" ref={sortDropdownRef}>
-              <button
-                onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                <span>{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
-                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', sortDropdownOpen && 'rotate-180')} />
-              </button>
-              {sortDropdownOpen && (
-                <div className="absolute z-50 mt-1 right-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[100px]">
-                  {SORT_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setSortBy(option.value)
-                        setSortDropdownOpen(false)
-                      }}
-                      className={cn(
-                        'w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm',
-                        'text-gray-700 dark:text-gray-200',
-                        'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
-                        sortBy === option.value && 'bg-gray-50 dark:bg-gray-800'
-                      )}
-                    >
-                      <span>{option.label}</span>
-                      {sortBy === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+            Todo ({todoItems.length})
+          </h2>
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {todoItems.map((item) => (
@@ -315,9 +371,11 @@ export default function BoardPage() {
             </AnimatePresence>
             {todoItems.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
-                {selectedLabel
-                  ? `No tasks with label "${selectedLabel}"`
-                  : 'No tasks yet. Add one above!'}
+                {searchQuery
+                  ? `No tasks matching "${searchQuery}"`
+                  : selectedLabel
+                    ? `No tasks with label "${selectedLabel}"`
+                    : 'No tasks yet. Add one above!'}
               </p>
             )}
           </div>
@@ -339,7 +397,7 @@ export default function BoardPage() {
             Done ({doneItems.length})
           </button>
 
-          {showDone && (
+          {(showDone || (searchQuery && doneItems.length > 0)) && (
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
                 {doneItems.map((item) => (
@@ -356,9 +414,11 @@ export default function BoardPage() {
               </AnimatePresence>
               {doneItems.length === 0 && (
                 <p className="text-center text-muted-foreground py-8">
-                  {selectedLabel
-                    ? `No completed tasks with label "${selectedLabel}"`
-                    : 'Completed tasks will appear here'}
+                  {searchQuery
+                    ? `No completed tasks matching "${searchQuery}"`
+                    : selectedLabel
+                      ? `No completed tasks with label "${selectedLabel}"`
+                      : 'Completed tasks will appear here'}
                 </p>
               )}
             </div>
