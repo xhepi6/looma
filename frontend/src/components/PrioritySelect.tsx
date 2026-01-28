@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Minus, ChevronUp } from 'lucide-react'
+import { ChevronDown, Minus, ChevronUp, Check } from 'lucide-react'
 import type { ItemPriority } from '@/lib/api'
 import { getPriorityStyle, getPriorityLabel } from '@/lib/priorityColors'
 import { useTheme } from '@/hooks/useTheme'
@@ -75,7 +75,7 @@ export default function PrioritySelect({ value, onChange }: PrioritySelectProps)
         onKeyDown={handleKeyDown}
         className={cn(
           'flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium transition-all',
-          'hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 dark:hover:ring-gray-600',
+          'hover:opacity-80',
           'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary'
         )}
         style={{ backgroundColor: currentStyle.bg, color: currentStyle.text }}
@@ -85,7 +85,7 @@ export default function PrioritySelect({ value, onChange }: PrioritySelectProps)
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[100px]">
+        <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[120px]">
           {priorities.map((priority) => {
             const Icon = priorityIcons[priority]
             const style = getPriorityStyle(priority, isDark)
@@ -97,9 +97,10 @@ export default function PrioritySelect({ value, onChange }: PrioritySelectProps)
                 type="button"
                 onClick={() => handleSelect(priority)}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left',
-                  'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-                  isSelected && 'bg-gray-100 dark:bg-gray-600'
+                  'w-full flex items-center gap-2 px-2 py-1.5 text-sm',
+                  'text-gray-700 dark:text-gray-200',
+                  'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                  isSelected && 'bg-gray-50 dark:bg-gray-800'
                 )}
               >
                 <span
@@ -108,7 +109,10 @@ export default function PrioritySelect({ value, onChange }: PrioritySelectProps)
                 >
                   <Icon className="h-3 w-3" />
                 </span>
-                <span>{getPriorityLabel(priority)}</span>
+                <span className="flex-1 text-left">{getPriorityLabel(priority)}</span>
+                {isSelected && (
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                )}
               </button>
             )
           })}
