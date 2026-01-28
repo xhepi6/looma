@@ -12,7 +12,7 @@ import { toast } from '@/components/ui/toaster'
 import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check } from 'lucide-react'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest'
 
@@ -196,7 +196,10 @@ export default function BoardPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-primary">Looma</h1>
+          <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            Looma
+          </h1>
           <div className="flex items-center gap-2">
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
