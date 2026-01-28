@@ -30,6 +30,7 @@ class Item(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     last_edited_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    completed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Reminder tracking
     reminded_due_window = Column(String(20), nullable=True)

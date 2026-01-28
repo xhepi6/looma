@@ -86,6 +86,13 @@ export default function ItemCard({
             allLabels={allLabels}
           />
         </div>
+        {/* Completed by indicator */}
+        {isDone && item.completed_by_username && (
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <Check className="h-3 w-3" />
+            Marked as done by {item.completed_by_username}
+          </p>
+        )}
       </div>
 
       {/* Actions */}

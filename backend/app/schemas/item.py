@@ -35,6 +35,8 @@ class ItemResponse(BaseModel):
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     last_edited_by_user_id: Optional[int] = None
+    completed_by_user_id: Optional[int] = None
+    completed_by_username: Optional[str] = None
     labels: List[str] = Field(default_factory=list)
 
     class Config:

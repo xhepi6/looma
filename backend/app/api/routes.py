@@ -14,6 +14,17 @@ from app.realtime.manager import manager
 router = APIRouter(tags=["api"])
 
 
+async def enrich_item_with_username(item: Item, db: AsyncSession) -> dict:
+    """Add completed_by_username to item response."""
+    response = ItemResponse.model_validate(item).model_dump(mode="json")
+    if item.completed_by_user_id:
+        result = await db.execute(
+            select(User.username).where(User.id == item.completed_by_user_id)
+        )
+        response['completed_by_username'] = result.scalar_one_or_none()
+    return response
+
+
 # ============ BOARDS ============
 
 @router.get("/boards", response_model=List[BoardResponse])
@@ -61,7 +72,7 @@ async def get_board(
 
 # ============ ITEMS ============
 
-@router.get("/boards/{board_id}/items", response_model=List[ItemResponse])
+@router.get("/boards/{board_id}/items")
 async def get_items(
     board_id: int,
     db: AsyncSession = Depends(get_db),
@@ -73,7 +84,8 @@ async def get_items(
         .where(Item.board_id == board_id)
         .order_by(Item.position.asc(), Item.updated_at.desc())
     )
-    return result.scalars().all()
+    items = result.scalars().all()
+    return [await enrich_item_with_username(item, db) for item in items]
 
 
 @router.post("/boards/{board_id}/items", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -108,14 +120,17 @@ async def create_item(
     await db.commit()
     await db.refresh(item)
 
+    # Enrich with username for broadcast and response
+    enriched_item = await enrich_item_with_username(item, db)
+
     # Broadcast to connected clients
     await manager.broadcast_to_board(
         board_id,
         "item.created",
-        ItemResponse.model_validate(item).model_dump(mode="json")
+        enriched_item
     )
 
-    return item
+    return enriched_item
 
 
 @router.patch("/items/{item_id}", response_model=ItemResponse)
@@ -141,8 +156,10 @@ async def update_item(
     # Track completion
     if data.status == ItemStatus.DONE and item.completed_at is None:
         item.completed_at = datetime.now(timezone.utc)
+        item.completed_by_user_id = current_user.id
     elif data.status == ItemStatus.TODO:
         item.completed_at = None
+        item.completed_by_user_id = None
 
     item.last_edited_by_user_id = current_user.id
     item.updated_at = datetime.now(timezone.utc)
@@ -150,14 +167,17 @@ async def update_item(
     await db.commit()
     await db.refresh(item)
 
+    # Enrich with username for broadcast and response
+    enriched_item = await enrich_item_with_username(item, db)
+
     # Broadcast to connected clients
     await manager.broadcast_to_board(
         item.board_id,
         "item.updated",
-        ItemResponse.model_validate(item).model_dump(mode="json")
+        enriched_item
     )
 
-    return item
+    return enriched_item
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

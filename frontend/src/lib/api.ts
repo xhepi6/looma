@@ -27,6 +27,8 @@ export interface Item {
   updated_at: string
   completed_at: string | null
   last_edited_by_user_id: number | null
+  completed_by_user_id: number | null
+  completed_by_username: string | null
   labels: string[]
 }
 
