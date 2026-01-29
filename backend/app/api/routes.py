@@ -12,7 +12,7 @@ from app.models.item import ItemStatus
 from app.schemas import BoardResponse, BoardCreate, ItemResponse, ItemCreate, ItemUpdate
 from app.auth.deps import get_current_user
 from app.realtime.manager import manager
-from app.services.notifications import send_ntfy, PRIORITY_MAP
+from app.services.notifications import send_ntfy, build_ntfy_body, PRIORITY_MAP, TAG_MAP
 
 router = APIRouter(tags=["api"])
 
@@ -133,11 +133,12 @@ async def create_item(
         enriched_item
     )
 
+    body = build_ntfy_body(data.title, data.labels or [], data.priority.value, data.due_at)
     asyncio.create_task(send_ntfy(
         title="New Task",
-        message=item.title,
-        priority=PRIORITY_MAP.get(item.priority.value, "default"),
-        tags="new",
+        message=body,
+        priority=PRIORITY_MAP.get(data.priority.value, "default"),
+        tags=TAG_MAP.get(data.priority.value, "blue_circle"),
     ))
 
     return enriched_item
@@ -199,11 +200,18 @@ async def update_item(
     )
 
     if newly_completed:
+        body = build_ntfy_body(
+            item.title,
+            item.labels or [],
+            item.priority.value,
+            completed_by=current_user.username,
+        )
+        priority_tag = TAG_MAP.get(item.priority.value, "blue_circle")
         asyncio.create_task(send_ntfy(
             title="Task Completed",
-            message=item.title,
+            message=body,
             priority=PRIORITY_MAP.get(item.priority.value, "default"),
-            tags="white_check_mark",
+            tags=f"white_check_mark,{priority_tag}",
         ))
 
     return enriched_item

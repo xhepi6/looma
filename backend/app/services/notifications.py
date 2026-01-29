@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime
 
 import httpx
 
@@ -12,6 +13,34 @@ PRIORITY_MAP = {
     "medium": "default",
     "high": "high",
 }
+
+TAG_MAP = {
+    "low": "white_circle",
+    "medium": "blue_circle",
+    "high": "rotating_light",
+}
+
+
+def build_ntfy_body(
+    title: str,
+    labels: list[str],
+    priority: str,
+    due_at: datetime | None = None,
+    completed_by: str | None = None,
+) -> str:
+    """Build enriched notification body."""
+    line1 = title
+    if labels:
+        line1 += " " + " ".join(f"[{l}]" for l in labels)
+
+    parts = [f"Priority: {priority.capitalize()}"]
+    if due_at:
+        parts.append(f"Due: {due_at.strftime('%b %-d')}")
+    if completed_by:
+        parts.append(f"Completed by {completed_by}")
+
+    line2 = " · ".join(parts)
+    return f"{line1}\n{line2}"
 
 
 async def send_ntfy(title: str, message: str, priority: str = "default", tags: str = ""):
