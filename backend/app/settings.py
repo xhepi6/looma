@@ -10,6 +10,10 @@ class Settings(BaseSettings):
 
     # Discord notifications (optional)
     discord_webhook_url: Optional[str] = None
+
+    # ntfy notifications (optional)
+    ntfy_username: Optional[str] = None
+    ntfy_password: Optional[str] = None
     reminder_enabled: bool = False
     reminder_interval_minutes: int = 10
     reminder_due_soon_hours: int = 24

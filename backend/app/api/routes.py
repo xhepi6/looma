@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -10,6 +12,7 @@ from app.models.item import ItemStatus
 from app.schemas import BoardResponse, BoardCreate, ItemResponse, ItemCreate, ItemUpdate
 from app.auth.deps import get_current_user
 from app.realtime.manager import manager
+from app.services.notifications import send_ntfy, PRIORITY_MAP
 
 router = APIRouter(tags=["api"])
 
@@ -130,6 +133,13 @@ async def create_item(
         enriched_item
     )
 
+    asyncio.create_task(send_ntfy(
+        title="New Task",
+        message=item.title,
+        priority=PRIORITY_MAP.get(item.priority.value, "default"),
+        tags="new",
+    ))
+
     return enriched_item
 
 
@@ -164,7 +174,8 @@ async def update_item(
         setattr(item, field, value)
 
     # Track completion
-    if data.status == ItemStatus.DONE and item.completed_at is None:
+    newly_completed = data.status == ItemStatus.DONE and item.completed_at is None
+    if newly_completed:
         item.completed_at = datetime.now(timezone.utc)
         item.completed_by_user_id = current_user.id
     elif data.status == ItemStatus.TODO:
@@ -186,6 +197,14 @@ async def update_item(
         "item.updated",
         enriched_item
     )
+
+    if newly_completed:
+        asyncio.create_task(send_ntfy(
+            title="Task Completed",
+            message=item.title,
+            priority=PRIORITY_MAP.get(item.priority.value, "default"),
+            tags="white_check_mark",
+        ))
 
     return enriched_item
 
