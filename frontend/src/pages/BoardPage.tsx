@@ -12,6 +12,7 @@ import ItemCard from '@/components/ItemCard'
 import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
 import CalendarPicker from '@/components/ui/calendar'
+import PrioritySelect from '@/components/PrioritySelect'
 import { format } from 'date-fns'
 import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar } from 'lucide-react'
 
@@ -42,6 +43,7 @@ export default function BoardPage() {
 
   const [newItemTitle, setNewItemTitle] = useState('')
   const [newItemDueDate, setNewItemDueDate] = useState<Date | null>(null)
+  const [newItemPriority, setNewItemPriority] = useState<api.ItemPriority>('medium')
   const [dueDatePickerOpen, setDueDatePickerOpen] = useState(false)
   const dueDatePickerRef = useRef<HTMLDivElement>(null)
   const [showDone, setShowDone] = useState(false)
@@ -104,7 +106,7 @@ export default function BoardPage() {
   })
 
   const createItemMutation = useMutation({
-    mutationFn: (data: { title: string; due_at?: string }) => api.createItem(data),
+    mutationFn: (data: { title: string; due_at?: string; priority?: api.ItemPriority }) => api.createItem(data),
     onSuccess: () => {
       // Don't add item here - WebSocket will handle it to avoid duplicates
       // Only refetch if WebSocket is disconnected
@@ -113,6 +115,7 @@ export default function BoardPage() {
       }
       setNewItemTitle('')
       setNewItemDueDate(null)
+      setNewItemPriority('medium')
     },
     onError: () => {
       toast({ title: 'Failed to create item', variant: 'destructive' })
@@ -209,7 +212,7 @@ export default function BoardPage() {
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (newItemTitle.trim()) {
-      const data: { title: string; due_at?: string } = { title: newItemTitle.trim() }
+      const data: { title: string; due_at?: string; priority?: api.ItemPriority } = { title: newItemTitle.trim(), priority: newItemPriority }
       if (newItemDueDate) {
         const d = newItemDueDate
         data.due_at = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)).toISOString()
@@ -334,6 +337,7 @@ export default function BoardPage() {
                 </div>
               )}
             </div>
+            <PrioritySelect value={newItemPriority} onChange={setNewItemPriority} />
             <Button type="submit" disabled={!newItemTitle.trim()}>
               <Plus className="h-4 w-4 mr-1" />
               Add

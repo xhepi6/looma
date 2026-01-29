@@ -116,6 +116,8 @@ async def create_item(
         title=data.title,
         notes=data.notes,
         due_at=data.due_at,
+        priority=data.priority,
+        labels=data.labels,
         position=max_position + 1,
         last_edited_by_user_id=current_user.id
     )
