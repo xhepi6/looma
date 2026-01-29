@@ -1,7 +1,10 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+
+logger = logging.getLogger(__name__)
 
 from app.settings import settings
 from app.db import init_db, async_session_maker
@@ -37,6 +40,7 @@ async def lifespan(app: FastAPI):
             id="due_date_reminders",
         )
         scheduler.start()
+        logger.info("Due date reminder scheduler started (cron every minute for testing)")
 
     yield
 
