@@ -36,11 +36,11 @@ async def lifespan(app: FastAPI):
         scheduler = AsyncIOScheduler()
         scheduler.add_job(
             check_due_date_reminders,
-            CronTrigger(minute="*", timezone="Europe/Berlin"),
+            CronTrigger(hour="11,16", timezone="Europe/Berlin"),
             id="due_date_reminders",
         )
         scheduler.start()
-        logger.info("Due date reminder scheduler started (cron every minute for testing)")
+        logger.info("Due date reminder scheduler started (11:00 and 16:00 CET)")
 
     yield
 
