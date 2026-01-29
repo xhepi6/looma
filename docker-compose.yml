@@ -13,6 +13,8 @@ services:
       - SEED_USER_1_PASSWORD=${SEED_USER_1_PASSWORD:-password123}
       - SEED_USER_2_USERNAME=${SEED_USER_2_USERNAME:-bob}
       - SEED_USER_2_PASSWORD=${SEED_USER_2_PASSWORD:-password123}
+      - NTFY_USERNAME=${NTFY_USERNAME:-}
+      - NTFY_PASSWORD=${NTFY_PASSWORD:-}
     volumes:
       - sqlite_data:/data
     networks:
