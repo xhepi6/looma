@@ -24,7 +24,24 @@ async def lifespan(app: FastAPI):
     async with async_session_maker() as db:
         await seed_database(db)
 
+    scheduler = None
+    if settings.reminder_enabled:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from app.services.notifications import check_due_date_reminders
+
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(
+            check_due_date_reminders,
+            CronTrigger(minute="*", timezone="Europe/Berlin"),
+            id="due_date_reminders",
+        )
+        scheduler.start()
+
     yield
+
+    if scheduler:
+        scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
