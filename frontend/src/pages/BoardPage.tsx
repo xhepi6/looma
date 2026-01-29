@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import CalendarPicker from '@/components/ui/calendar'
 import PrioritySelect from '@/components/PrioritySelect'
 import { format } from 'date-fns'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar } from 'lucide-react'
+import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar, Tag } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest' | 'due-date'
 
@@ -44,6 +44,10 @@ export default function BoardPage() {
   const [newItemTitle, setNewItemTitle] = useState('')
   const [newItemDueDate, setNewItemDueDate] = useState<Date | null>(null)
   const [newItemPriority, setNewItemPriority] = useState<api.ItemPriority>('medium')
+  const [newItemLabels, setNewItemLabels] = useState<string[]>([])
+  const [labelPickerOpen, setLabelPickerOpen] = useState(false)
+  const [labelInput, setLabelInput] = useState('')
+  const labelPickerRef = useRef<HTMLDivElement>(null)
   const [dueDatePickerOpen, setDueDatePickerOpen] = useState(false)
   const dueDatePickerRef = useRef<HTMLDivElement>(null)
   const [showDone, setShowDone] = useState(false)
@@ -79,6 +83,18 @@ export default function BoardPage() {
   }, [dueDatePickerOpen])
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (labelPickerRef.current && !labelPickerRef.current.contains(event.target as Node)) {
+        setLabelPickerOpen(false)
+      }
+    }
+    if (labelPickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [labelPickerOpen])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
@@ -106,7 +122,7 @@ export default function BoardPage() {
   })
 
   const createItemMutation = useMutation({
-    mutationFn: (data: { title: string; due_at?: string; priority?: api.ItemPriority }) => api.createItem(data),
+    mutationFn: (data: Parameters<typeof api.createItem>[0]) => api.createItem(data),
     onSuccess: () => {
       // Don't add item here - WebSocket will handle it to avoid duplicates
       // Only refetch if WebSocket is disconnected
@@ -116,6 +132,7 @@ export default function BoardPage() {
       setNewItemTitle('')
       setNewItemDueDate(null)
       setNewItemPriority('medium')
+      setNewItemLabels([])
     },
     onError: () => {
       toast({ title: 'Failed to create item', variant: 'destructive' })
@@ -212,10 +229,13 @@ export default function BoardPage() {
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (newItemTitle.trim()) {
-      const data: { title: string; due_at?: string; priority?: api.ItemPriority } = { title: newItemTitle.trim(), priority: newItemPriority }
+      const data: Parameters<typeof api.createItem>[0] = { title: newItemTitle.trim(), priority: newItemPriority }
       if (newItemDueDate) {
         const d = newItemDueDate
         data.due_at = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)).toISOString()
+      }
+      if (newItemLabels.length > 0) {
+        data.labels = newItemLabels
       }
       createItemMutation.mutate(data)
     }
@@ -337,7 +357,73 @@ export default function BoardPage() {
                 </div>
               )}
             </div>
-            <PrioritySelect value={newItemPriority} onChange={setNewItemPriority} />
+            <PrioritySelect value={newItemPriority} onChange={setNewItemPriority} size="md" />
+            <div className="relative" ref={labelPickerRef}>
+              <button
+                type="button"
+                onClick={() => setLabelPickerOpen(!labelPickerOpen)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 h-9 text-sm border rounded-md transition-colors',
+                  'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800',
+                  newItemLabels.length > 0
+                    ? 'text-foreground'
+                    : 'text-muted-foreground'
+                )}
+                title="Labels (optional)"
+              >
+                <Tag className="h-4 w-4" />
+                {newItemLabels.length > 0 ? `${newItemLabels.length} label${newItemLabels.length > 1 ? 's' : ''}` : 'Labels'}
+              </button>
+              {labelPickerOpen && (
+                <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[200px]">
+                  <div className="flex gap-1 mb-2">
+                    <Input
+                      value={labelInput}
+                      onChange={(e) => setLabelInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const trimmed = labelInput.trim()
+                          if (trimmed && !newItemLabels.includes(trimmed)) {
+                            setNewItemLabels([...newItemLabels, trimmed])
+                          }
+                          setLabelInput('')
+                        }
+                      }}
+                      placeholder="Add label..."
+                      className="h-7 text-xs"
+                      autoFocus
+                    />
+                  </div>
+                  {allLabels.filter((l) => !newItemLabels.includes(l) && l.toLowerCase().includes(labelInput.toLowerCase())).length > 0 && (
+                    <div className="max-h-32 overflow-y-auto mb-2">
+                      {allLabels
+                        .filter((l) => !newItemLabels.includes(l) && l.toLowerCase().includes(labelInput.toLowerCase()))
+                        .map((label) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => {
+                              setNewItemLabels([...newItemLabels, label])
+                              setLabelInput('')
+                            }}
+                            className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {newItemLabels.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200 dark:border-gray-700">
+                      {newItemLabels.map((label) => (
+                        <LabelBadge key={label} label={label} onRemove={() => setNewItemLabels(newItemLabels.filter((l) => l !== label))} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <Button type="submit" disabled={!newItemTitle.trim()}>
               <Plus className="h-4 w-4 mr-1" />
               Add

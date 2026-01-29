@@ -74,7 +74,7 @@ export const getBoard = (id: number) => fetchApi<Board>(`/boards/${id}`)
 export const getItems = () =>
   fetchApi<Item[]>(`/boards/1/items`)
 
-export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority }) =>
+export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority; labels?: string[] }) =>
   fetchApi<Item>(`/boards/1/items`, {
     method: 'POST',
     body: JSON.stringify(data),
