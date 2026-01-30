@@ -35,3 +35,6 @@ Thumbs.db
 # Docker volumes
 caddy_data/
 caddy_config/
+
+
+.claude
