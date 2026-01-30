@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from apscheduler.triggers.cron import CronTrigger
         from app.services.notifications import check_due_date_reminders
+        from app.services.cleanup import delete_old_completed_tasks
 
         scheduler = AsyncIOScheduler()
         scheduler.add_job(
@@ -39,8 +40,14 @@ async def lifespan(app: FastAPI):
             CronTrigger(hour="11,16", timezone="Europe/Berlin"),
             id="due_date_reminders",
         )
+        scheduler.add_job(
+            delete_old_completed_tasks,
+            CronTrigger(hour=3, timezone="Europe/Berlin"),
+            id="cleanup_old_completed_tasks",
+        )
         scheduler.start()
         logger.info("Due date reminder scheduler started (11:00 and 16:00 CET)")
+        logger.info("Cleanup scheduler started (03:00 CET daily)")
 
     yield
 
