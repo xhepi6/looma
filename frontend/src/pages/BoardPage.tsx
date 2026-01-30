@@ -310,13 +310,14 @@ export default function BoardPage() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Add item form */}
         <form onSubmit={handleAddItem} className="mb-6">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Add a new task..."
               value={newItemTitle}
               onChange={(e) => setNewItemTitle(e.target.value)}
               className="flex-1"
             />
+            <div className="flex gap-2">
             <div className="relative" ref={dueDatePickerRef}>
               <button
                 type="button"
@@ -428,6 +429,7 @@ export default function BoardPage() {
               <Plus className="h-4 w-4 mr-1" />
               Add
             </Button>
+            </div>
           </div>
         </form>
 
