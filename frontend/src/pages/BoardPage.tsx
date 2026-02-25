@@ -333,7 +333,7 @@ export default function BoardPage() {
               onChange={(e) => setNewItemTitle(e.target.value)}
               className="flex-1"
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 sm:flex gap-2">
             <div className="relative" ref={dueDatePickerRef}>
               <button
                 type="button"
@@ -450,7 +450,7 @@ export default function BoardPage() {
                 </div>
               )}
             </div>
-            <Button type="submit" disabled={!newItemTitle.trim()}>
+            <Button type="submit" disabled={!newItemTitle.trim()} className="sm:w-auto">
               <Plus className="h-4 w-4 mr-1" />
               Add
             </Button>
