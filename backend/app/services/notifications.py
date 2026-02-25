@@ -23,12 +23,22 @@ TAG_MAP = {
 }
 
 
+RECURRENCE_LABELS = {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "weekdays": "Weekdays",
+    "custom": "Custom",
+}
+
+
 def build_ntfy_body(
     title: str,
     labels: list[str],
     priority: str,
     due_at: datetime | None = None,
     completed_by: str | None = None,
+    recurrence_type: str | None = None,
 ) -> str:
     """Build enriched notification body."""
     line1 = title
@@ -38,6 +48,8 @@ def build_ntfy_body(
     parts = [f"Priority: {priority.capitalize()}"]
     if due_at:
         parts.append(f"Due: {due_at.strftime('%b %-d')}")
+    if recurrence_type:
+        parts.append(f"Repeats: {RECURRENCE_LABELS.get(recurrence_type, recurrence_type)}")
     if completed_by:
         parts.append(f"Completed by {completed_by}")
 

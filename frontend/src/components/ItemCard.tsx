@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import type { Item, ItemPriority } from '@/lib/api'
+import type { Item, ItemPriority, RecurrenceType } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Check, Trash2, RotateCcw } from 'lucide-react'
+import { Check, Trash2, RotateCcw, Repeat } from 'lucide-react'
 import LabelBadge from '@/components/LabelBadge'
 import LabelInput from '@/components/LabelInput'
 import PrioritySelect from '@/components/PrioritySelect'
 import DueDatePicker from '@/components/DueDatePicker'
+import RecurrenceSelect, { getRecurrenceSummary } from '@/components/RecurrenceSelect'
 import { isOverdue } from '@/lib/dateUtils'
 
 interface ItemCardProps {
@@ -15,6 +16,7 @@ interface ItemCardProps {
   onUpdateLabels: (labels: string[]) => void
   onUpdatePriority: (priority: ItemPriority) => void
   onUpdateDueDate: (dueAt: string | null) => void
+  onUpdateRecurrence: (type: RecurrenceType | null, days: string[] | null) => void
   onDelete: () => void
   allLabels?: string[]
 }
@@ -25,6 +27,7 @@ export default function ItemCard({
   onUpdateLabels,
   onUpdatePriority,
   onUpdateDueDate,
+  onUpdateRecurrence,
   onDelete,
   allLabels = [],
 }: ItemCardProps) {
@@ -98,6 +101,23 @@ export default function ItemCard({
             onChange={onUpdateDueDate}
             disabled={isDone}
           />
+          {isDone && item.recurrence_type && (
+            <span
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+              title={`Repeats: ${getRecurrenceSummary(item.recurrence_type, item.recurrence_days)}`}
+            >
+              <Repeat className="h-3 w-3" />
+              {getRecurrenceSummary(item.recurrence_type, item.recurrence_days)}
+            </span>
+          )}
+          {!isDone && (
+            <RecurrenceSelect
+              recurrenceType={item.recurrence_type}
+              recurrenceDays={item.recurrence_days}
+              onChange={onUpdateRecurrence}
+              size="sm"
+            />
+          )}
         </div>
         {/* Completed by indicator */}
         {isDone && item.completed_by_username && (

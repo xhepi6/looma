@@ -10,6 +10,8 @@ class ItemCreate(BaseModel):
     due_at: Optional[datetime] = None
     labels: List[str] = Field(default_factory=list)
     priority: ItemPriority = ItemPriority.MEDIUM
+    recurrence_type: Optional[str] = None
+    recurrence_days: Optional[List[str]] = None
 
 
 class ItemUpdate(BaseModel):
@@ -20,6 +22,8 @@ class ItemUpdate(BaseModel):
     position: Optional[float] = None
     labels: Optional[List[str]] = None
     priority: Optional[ItemPriority] = None
+    recurrence_type: Optional[str] = None
+    recurrence_days: Optional[List[str]] = None
 
 
 class ItemResponse(BaseModel):
@@ -38,6 +42,8 @@ class ItemResponse(BaseModel):
     completed_by_user_id: Optional[int] = None
     completed_by_username: Optional[str] = None
     labels: List[str] = Field(default_factory=list)
+    recurrence_type: Optional[str] = None
+    recurrence_days: Optional[List[str]] = None
 
     class Config:
         from_attributes = True

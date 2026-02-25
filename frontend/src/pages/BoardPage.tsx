@@ -13,7 +13,9 @@ import LabelBadge from '@/components/LabelBadge'
 import { cn } from '@/lib/utils'
 import CalendarPicker from '@/components/ui/calendar'
 import PrioritySelect from '@/components/PrioritySelect'
+import RecurrenceSelect from '@/components/RecurrenceSelect'
 import { format } from 'date-fns'
+import type { RecurrenceType } from '@/lib/api'
 import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar, Tag } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest' | 'due-date'
@@ -45,6 +47,8 @@ export default function BoardPage() {
   const [newItemDueDate, setNewItemDueDate] = useState<Date | null>(null)
   const [newItemPriority, setNewItemPriority] = useState<api.ItemPriority>('medium')
   const [newItemLabels, setNewItemLabels] = useState<string[]>([])
+  const [newItemRecurrence, setNewItemRecurrence] = useState<RecurrenceType | null>(null)
+  const [newItemRecurrenceDays, setNewItemRecurrenceDays] = useState<string[] | null>(null)
   const [labelPickerOpen, setLabelPickerOpen] = useState(false)
   const [labelInput, setLabelInput] = useState('')
   const labelPickerRef = useRef<HTMLDivElement>(null)
@@ -133,6 +137,8 @@ export default function BoardPage() {
       setNewItemDueDate(null)
       setNewItemPriority('medium')
       setNewItemLabels([])
+      setNewItemRecurrence(null)
+      setNewItemRecurrenceDays(null)
     },
     onError: () => {
       toast({ title: 'Failed to create item', variant: 'destructive' })
@@ -237,6 +243,12 @@ export default function BoardPage() {
       if (newItemLabels.length > 0) {
         data.labels = newItemLabels
       }
+      if (newItemRecurrence) {
+        data.recurrence_type = newItemRecurrence
+        if (newItemRecurrence === 'custom' && newItemRecurrenceDays) {
+          data.recurrence_days = newItemRecurrenceDays
+        }
+      }
       createItemMutation.mutate(data)
     }
   }
@@ -262,6 +274,10 @@ export default function BoardPage() {
 
   const handleUpdateDueDate = (id: number, dueAt: string | null) => {
     updateItemMutation.mutate({ id, data: { due_at: dueAt } })
+  }
+
+  const handleUpdateRecurrence = (id: number, recurrenceType: RecurrenceType | null, recurrenceDays: string[] | null) => {
+    updateItemMutation.mutate({ id, data: { recurrence_type: recurrenceType, recurrence_days: recurrenceDays } })
   }
 
   const handleLabelFilter = (label: string) => {
@@ -359,6 +375,15 @@ export default function BoardPage() {
               )}
             </div>
             <PrioritySelect value={newItemPriority} onChange={setNewItemPriority} size="md" />
+            <RecurrenceSelect
+              recurrenceType={newItemRecurrence}
+              recurrenceDays={newItemRecurrenceDays}
+              onChange={(type, days) => {
+                setNewItemRecurrence(type)
+                setNewItemRecurrenceDays(days)
+              }}
+              size="md"
+            />
             <div className="relative" ref={labelPickerRef}>
               <button
                 type="button"
@@ -532,6 +557,7 @@ export default function BoardPage() {
                   onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
                   onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
                   onUpdateDueDate={(dueAt) => handleUpdateDueDate(item.id, dueAt)}
+                  onUpdateRecurrence={(type, days) => handleUpdateRecurrence(item.id, type, days)}
                   onDelete={() => handleDelete(item.id)}
                   allLabels={allLabels}
                 />
@@ -576,6 +602,7 @@ export default function BoardPage() {
                     onUpdateLabels={(labels) => handleUpdateLabels(item.id, labels)}
                     onUpdatePriority={(priority) => handleUpdatePriority(item.id, priority)}
                     onUpdateDueDate={(dueAt) => handleUpdateDueDate(item.id, dueAt)}
+                    onUpdateRecurrence={(type, days) => handleUpdateRecurrence(item.id, type, days)}
                     onDelete={() => handleDelete(item.id)}
                     allLabels={allLabels}
                   />

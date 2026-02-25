@@ -15,6 +15,14 @@ class ItemPriority(str, enum.Enum):
     HIGH = "high"
 
 
+class RecurrenceType(str, enum.Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    WEEKDAYS = "weekdays"
+    CUSTOM = "custom"
+
+
 class Item(Base):
     __tablename__ = "items"
 
@@ -38,3 +46,7 @@ class Item(Base):
 
     # Labels
     labels = Column(JSON, default=list, nullable=False)
+
+    # Recurrence
+    recurrence_type = Column(String(20), nullable=True)
+    recurrence_days = Column(JSON, nullable=True)

@@ -4,7 +4,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-8000}:8001"
     environment:
       - APP_ENV=dev
       - APP_SECRET_KEY=${APP_SECRET_KEY:-dev-secret-key}
@@ -28,7 +28,7 @@ services:
     ports:
       - "${WEB_PORT:-5173}:5173"
     environment:
-      - VITE_API_URL=http://api:8000
+      - API_PROXY_TARGET=http://api:8001
     volumes:
       - ./frontend:/app
       - /app/node_modules

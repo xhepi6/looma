@@ -13,6 +13,7 @@ from app.schemas import BoardResponse, BoardCreate, ItemResponse, ItemCreate, It
 from app.auth.deps import get_current_user
 from app.realtime.manager import manager
 from app.services.notifications import send_ntfy, build_ntfy_body, PRIORITY_MAP, TAG_MAP
+from app.services.recurrence import compute_next_due_date
 
 router = APIRouter(tags=["api"])
 
@@ -118,6 +119,8 @@ async def create_item(
         due_at=data.due_at,
         priority=data.priority,
         labels=data.labels,
+        recurrence_type=data.recurrence_type,
+        recurrence_days=data.recurrence_days,
         position=max_position + 1,
         last_edited_by_user_id=current_user.id
     )
@@ -135,7 +138,10 @@ async def create_item(
         enriched_item
     )
 
-    body = build_ntfy_body(data.title, data.labels or [], data.priority.value, data.due_at)
+    body = build_ntfy_body(
+        data.title, data.labels or [], data.priority.value,
+        due_at=data.due_at, recurrence_type=data.recurrence_type,
+    )
     asyncio.create_task(send_ntfy(
         title="New Task",
         message=body,
@@ -165,7 +171,7 @@ async def update_item(
 
     # Prevent modifying priority/labels on completed items (only status changes allowed)
     if item.status == ItemStatus.DONE:
-        allowed_fields = {'status', 'due_at'}
+        allowed_fields = {'status', 'due_at', 'recurrence_type', 'recurrence_days'}
         disallowed_updates = set(update_data.keys()) - allowed_fields
         if disallowed_updates:
             raise HTTPException(
@@ -215,6 +221,53 @@ async def update_item(
             priority=PRIORITY_MAP.get(item.priority.value, "default"),
             tags=f"white_check_mark,{priority_tag}",
         ))
+
+        # Spawn next occurrence for recurring tasks
+        if item.recurrence_type:
+            next_due = compute_next_due_date(
+                item.due_at, item.recurrence_type, item.recurrence_days
+            )
+            result = await db.execute(
+                select(func.coalesce(func.max(Item.position), 0))
+                .where(Item.board_id == item.board_id)
+            )
+            max_pos = result.scalar() or 0
+
+            next_item = Item(
+                board_id=item.board_id,
+                title=item.title,
+                notes=item.notes,
+                priority=item.priority,
+                labels=item.labels or [],
+                recurrence_type=item.recurrence_type,
+                recurrence_days=item.recurrence_days,
+                due_at=next_due,
+                position=max_pos + 1,
+                last_edited_by_user_id=current_user.id,
+            )
+            db.add(next_item)
+            await db.commit()
+            await db.refresh(next_item)
+
+            enriched_next = await enrich_item_with_username(next_item, db)
+            await manager.broadcast_to_board(
+                item.board_id, "item.created", enriched_next
+            )
+
+            # Notify about the new recurring occurrence
+            next_body = build_ntfy_body(
+                next_item.title,
+                next_item.labels or [],
+                next_item.priority.value,
+                due_at=next_due,
+                recurrence_type=next_item.recurrence_type,
+            )
+            asyncio.create_task(send_ntfy(
+                title="Next Occurrence",
+                message=next_body,
+                priority=PRIORITY_MAP.get(next_item.priority.value, "default"),
+                tags=f"repeat,{TAG_MAP.get(next_item.priority.value, 'blue_circle')}",
+            ))
 
     return enriched_item
 

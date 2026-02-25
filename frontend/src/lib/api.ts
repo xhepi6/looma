@@ -13,6 +13,7 @@ export interface Board {
 }
 
 export type ItemPriority = 'low' | 'medium' | 'high'
+export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom'
 
 export interface Item {
   id: number
@@ -30,6 +31,8 @@ export interface Item {
   completed_by_user_id: number | null
   completed_by_username: string | null
   labels: string[]
+  recurrence_type: RecurrenceType | null
+  recurrence_days: string[] | null
 }
 
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
@@ -74,13 +77,13 @@ export const getBoard = (id: number) => fetchApi<Board>(`/boards/${id}`)
 export const getItems = () =>
   fetchApi<Item[]>(`/boards/1/items`)
 
-export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority; labels?: string[] }) =>
+export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority; labels?: string[]; recurrence_type?: RecurrenceType; recurrence_days?: string[] }) =>
   fetchApi<Item>(`/boards/1/items`, {
     method: 'POST',
     body: JSON.stringify(data),
   })
 
-export const updateItem = (itemId: number, data: Partial<Pick<Item, 'title' | 'notes' | 'status' | 'priority' | 'due_at' | 'position' | 'labels'>>) =>
+export const updateItem = (itemId: number, data: Partial<Pick<Item, 'title' | 'notes' | 'status' | 'priority' | 'due_at' | 'position' | 'labels' | 'recurrence_type' | 'recurrence_days'>>) =>
   fetchApi<Item>(`/items/${itemId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
