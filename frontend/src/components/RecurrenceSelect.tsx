@@ -157,7 +157,7 @@ export default function RecurrenceSelect({
       {isOpen && (
         <div className={cn(
           'absolute z-50 mt-1 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[180px]',
-          align === 'right' ? 'right-0' : 'left-0'
+          align === 'right' ? 'right-0' : 'right-0 sm:right-auto sm:left-0'
         )}>
           {RECURRENCE_OPTIONS.map((option) => {
             const isSelected = option.value === recurrenceType
