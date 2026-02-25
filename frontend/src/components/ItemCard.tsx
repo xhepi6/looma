@@ -110,14 +110,6 @@ export default function ItemCard({
               {getRecurrenceSummary(item.recurrence_type, item.recurrence_days)}
             </span>
           )}
-          {!isDone && (
-            <RecurrenceSelect
-              recurrenceType={item.recurrence_type}
-              recurrenceDays={item.recurrence_days}
-              onChange={onUpdateRecurrence}
-              size="sm"
-            />
-          )}
         </div>
         {/* Completed by indicator */}
         {isDone && item.completed_by_username && (
@@ -130,6 +122,14 @@ export default function ItemCard({
 
       {/* Actions */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isDone && (
+          <RecurrenceSelect
+            recurrenceType={item.recurrence_type}
+            recurrenceDays={item.recurrence_days}
+            onChange={onUpdateRecurrence}
+            size="sm"
+          />
+        )}
         {isDone && (
           <Button
             variant="ghost"
