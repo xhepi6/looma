@@ -128,6 +128,7 @@ export default function ItemCard({
             recurrenceDays={item.recurrence_days}
             onChange={onUpdateRecurrence}
             size="sm"
+            align="right"
           />
         )}
         {isDone && (

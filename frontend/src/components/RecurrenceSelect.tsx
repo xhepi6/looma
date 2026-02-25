@@ -10,6 +10,7 @@ interface RecurrenceSelectProps {
   onChange: (type: RecurrenceType | null, days: string[] | null) => void
   disabled?: boolean
   size?: 'sm' | 'md'
+  align?: 'left' | 'right'
 }
 
 const RECURRENCE_OPTIONS: { value: RecurrenceType | null; label: string; description: string }[] = [
@@ -64,6 +65,7 @@ export default function RecurrenceSelect({
   onChange,
   disabled = false,
   size = 'sm',
+  align = 'left',
 }: RecurrenceSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -153,7 +155,10 @@ export default function RecurrenceSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[180px]">
+        <div className={cn(
+          'absolute z-50 mt-1 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[180px]',
+          align === 'right' ? 'right-0' : 'left-0'
+        )}>
           {RECURRENCE_OPTIONS.map((option) => {
             const isSelected = option.value === recurrenceType
 
