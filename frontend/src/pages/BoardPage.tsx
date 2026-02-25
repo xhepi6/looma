@@ -333,7 +333,7 @@ export default function BoardPage() {
               onChange={(e) => setNewItemTitle(e.target.value)}
               className="flex-1"
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
             <div className="relative" ref={dueDatePickerRef}>
               <button
                 type="button"
