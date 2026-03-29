@@ -63,7 +63,7 @@ async def send_ntfy(title: str, message: str, priority: str = "default", tags: s
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
-                "https://ntfy.liesandallies.com/looma",
+                "https://ntfy.xhepi.dev/looma",
                 content=message,
                 headers={
                     "Title": title,

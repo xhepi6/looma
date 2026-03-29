@@ -13,7 +13,7 @@ RUN npm install
 COPY . .
 
 # Set API URL for production build
-ARG VITE_API_URL=https://api.looma.liesandallies.com/api
+ARG VITE_API_URL=https://api.looma.xhepi.dev/api
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build the app
