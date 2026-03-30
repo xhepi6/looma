@@ -38,7 +38,7 @@ LOCAL_TEMP="${TMPDIR:-/tmp}/looma-prod-$(date +%s).db"
 # Build SSH/SCP options
 SSH_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -p $SSH_PORT"
 SCP_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -P $SSH_PORT"
-if [ -n "$SSH_KEY" ]; then
+if [ -n "$SSH_KEY" ] && [ -f "$SSH_KEY" ]; then
   SSH_OPTS="$SSH_OPTS -i $SSH_KEY"
   SCP_OPTS="$SCP_OPTS -i $SSH_KEY"
 fi
@@ -72,12 +72,18 @@ else
   # Container not running — use a temp container to write into the volume
   VOLUME_NAME=$(docker volume ls --format '{{.Name}}' | grep -E '(looma|workspace).*sqlite_data' | head -1)
   if [ -z "$VOLUME_NAME" ]; then
-    echo "Error: Could not find the sqlite_data volume. Run 'docker compose -f docker-compose.local.yml up -d' first."
-    exit 1
+    # Volume doesn't exist yet — create it via docker compose
+    echo "  Creating local volume..."
+    docker compose -f "$PROJECT_DIR/docker-compose.local.yml" create api 2>/dev/null || true
+    VOLUME_NAME=$(docker volume ls --format '{{.Name}}' | grep -E '(looma|workspace).*sqlite_data' | head -1)
+    if [ -z "$VOLUME_NAME" ]; then
+      echo "Error: Could not create sqlite_data volume."
+      exit 1
+    fi
   fi
-  docker run --rm \
+  MSYS_NO_PATHCONV=1 docker run --rm \
     -v "$VOLUME_NAME:/data" \
-    -v "$(cygpath -w "$LOCAL_TEMP" 2>/dev/null || echo "$LOCAL_TEMP"):/backup/app.db" \
+    -v "$(cygpath -w "$LOCAL_TEMP" 2>/dev/null || echo "$LOCAL_TEMP"):/backup/app.db:ro" \
     alpine cp /backup/app.db /data/app.db
 fi
 
