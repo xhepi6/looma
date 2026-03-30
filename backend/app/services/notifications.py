@@ -139,7 +139,7 @@ async def check_due_date_reminders():
 
             labels_str = ""
             if item.labels:
-                labels_str = " " + " ".join(f"[{l}]" for l in item.labels)
+                labels_str = " " + " ".join(f"[{l.name}]" for l in item.labels)
 
             body = f"{item.title}{labels_str}\nDue: {_due_label(window, due_date)}"
 

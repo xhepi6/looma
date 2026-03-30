@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List
 from app.models.item import ItemStatus, ItemPriority
+from app.schemas.label import LabelResponse
 
 
 class ItemCreate(BaseModel):
@@ -41,7 +42,7 @@ class ItemResponse(BaseModel):
     last_edited_by_user_id: Optional[int] = None
     completed_by_user_id: Optional[int] = None
     completed_by_username: Optional[str] = None
-    labels: List[str] = Field(default_factory=list)
+    labels: List[LabelResponse] = Field(default_factory=list)
     recurrence_type: Optional[str] = None
     recurrence_days: Optional[List[str]] = None
 

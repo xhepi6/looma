@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Text, Enum, JSON
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.engine import Base
+from app.models.label import item_labels
+
 import enum
 
 
@@ -44,8 +48,8 @@ class Item(Base):
     reminded_due_window = Column(String(20), nullable=True)
     reminded_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Labels
-    labels = Column(JSON, default=list, nullable=False)
+    # Labels (many-to-many via item_labels)
+    labels = relationship("Label", secondary=item_labels, lazy="selectin")
 
     # Recurrence
     recurrence_type = Column(String(20), nullable=True)

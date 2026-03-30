@@ -4,13 +4,16 @@ import { cn } from '@/lib/utils'
 
 interface LabelBadgeProps {
   label: string
+  color?: string
   onRemove?: () => void
   onClick?: () => void
   isSelected?: boolean
 }
 
-export default function LabelBadge({ label, onRemove, onClick, isSelected }: LabelBadgeProps) {
-  const colors = getLabelColor(label)
+export default function LabelBadge({ label, color, onRemove, onClick, isSelected }: LabelBadgeProps) {
+  const colors = color
+    ? { bg: color, text: darkenHexColor(color) }
+    : getLabelColor(label)
 
   const handleClick = onClick
     ? (e: React.MouseEvent) => {
@@ -44,4 +47,12 @@ export default function LabelBadge({ label, onRemove, onClick, isSelected }: Lab
       )}
     </span>
   )
+}
+
+function darkenHexColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const factor = 0.35
+  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`
 }

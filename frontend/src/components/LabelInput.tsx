@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import type { Label } from '@/lib/api'
 
 interface LabelInputProps {
   existingLabels: string[]
   onAddLabel: (label: string) => void
-  allLabels?: string[]
+  allLabels?: Label[]
 }
 
 export default function LabelInput({ existingLabels, onAddLabel, allLabels = [] }: LabelInputProps) {
@@ -19,8 +20,8 @@ export default function LabelInput({ existingLabels, onAddLabel, allLabels = [] 
   // Filter suggestions: match typed text, exclude already added labels
   const suggestions = allLabels.filter(
     (label) =>
-      !existingLabels.includes(label) &&
-      label.toLowerCase().includes(value.toLowerCase()) &&
+      !existingLabels.includes(label.name) &&
+      label.name.toLowerCase().includes(value.toLowerCase()) &&
       value.trim() !== ''
   )
 
@@ -47,7 +48,7 @@ export default function LabelInput({ existingLabels, onAddLabel, allLabels = [] 
     if (e.key === 'Enter') {
       e.preventDefault()
       if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-        handleSubmit(suggestions[highlightedIndex])
+        handleSubmit(suggestions[highlightedIndex].name)
       } else {
         handleSubmit()
       }
@@ -108,7 +109,7 @@ export default function LabelInput({ existingLabels, onAddLabel, allLabels = [] 
         >
           {suggestions.map((suggestion, index) => (
             <button
-              key={suggestion}
+              key={suggestion.id}
               type="button"
               className={cn(
                 'w-full text-left px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700',
@@ -116,11 +117,11 @@ export default function LabelInput({ existingLabels, onAddLabel, allLabels = [] 
               )}
               onMouseDown={(e) => {
                 e.preventDefault()
-                handleSubmit(suggestion)
+                handleSubmit(suggestion.name)
               }}
               onMouseEnter={() => setHighlightedIndex(index)}
             >
-              {suggestion}
+              {suggestion.name}
             </button>
           ))}
         </div>
