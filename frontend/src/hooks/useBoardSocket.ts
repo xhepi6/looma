@@ -76,6 +76,14 @@ export function useBoardSocket() {
           return old.filter((item) => item.id !== event.item!.id)
         })
         break
+
+      case 'label.created':
+      case 'label.updated':
+      case 'label.deleted':
+        // Refetch labels and items (items embed label objects)
+        queryClient.invalidateQueries({ queryKey: ['labels', event.board_id] })
+        queryClient.invalidateQueries({ queryKey: ['items', event.board_id] })
+        break
     }
   }, [queryClient])
 

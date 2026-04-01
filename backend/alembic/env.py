@@ -7,7 +7,7 @@ import asyncio
 
 # Import models to ensure they're registered
 from app.db.engine import Base
-from app.models import User, Session, Board, Item
+from app.models import User, Session, Board, Label, Item
 from app.settings import settings
 
 config = context.config

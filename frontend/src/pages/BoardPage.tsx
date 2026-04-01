@@ -125,6 +125,11 @@ export default function BoardPage() {
     queryFn: () => api.getItems(),
   })
 
+  const { data: allLabels = [] } = useQuery({
+    queryKey: ['labels', boardId],
+    queryFn: () => api.getLabels(boardId),
+  })
+
   const createItemMutation = useMutation({
     mutationFn: (data: Parameters<typeof api.createItem>[0]) => api.createItem(data),
     onSuccess: () => {
@@ -133,6 +138,8 @@ export default function BoardPage() {
       if (wsStatus !== 'connected') {
         queryClient.invalidateQueries({ queryKey: ['items', boardId] })
       }
+      // Refetch labels in case new ones were created
+      queryClient.invalidateQueries({ queryKey: ['labels', boardId] })
       setNewItemTitle('')
       setNewItemDueDate(null)
       setNewItemPriority('medium')
@@ -151,10 +158,16 @@ export default function BoardPage() {
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['items', boardId] })
       const previous = queryClient.getQueryData<api.Item[]>(['items', boardId])
+      // Exclude labels from optimistic update (server returns Label objects, we send strings)
+      const { labels: _, ...restData } = data as Record<string, unknown>
       queryClient.setQueryData<api.Item[]>(['items', boardId], (old) =>
-        old?.map((item) => (item.id === id ? { ...item, ...data } : item))
+        old?.map((item) => (item.id === id ? { ...item, ...restData } as api.Item : item))
       )
       return { previous }
+    },
+    onSuccess: () => {
+      // Refetch labels in case new ones were created via label names
+      queryClient.invalidateQueries({ queryKey: ['labels', boardId] })
     },
     onError: (_, __, context) => {
       if (context?.previous) {
@@ -182,9 +195,6 @@ export default function BoardPage() {
     },
   })
 
-  // Compute all unique labels from all items
-  const allLabels = [...new Set(items.flatMap((item) => item.labels || []))]
-
   // Filter items by search query, then by selected label
   const searchLower = searchQuery.toLowerCase()
   const searchedItems = searchQuery
@@ -196,7 +206,7 @@ export default function BoardPage() {
     : items
 
   const filteredItems = selectedLabel
-    ? searchedItems.filter((item) => item.labels?.includes(selectedLabel))
+    ? searchedItems.filter((item) => item.labels?.some((l) => l.name === selectedLabel))
     : searchedItems
 
   // Sort function based on selected option
@@ -421,21 +431,21 @@ export default function BoardPage() {
                       autoFocus
                     />
                   </div>
-                  {allLabels.filter((l) => !newItemLabels.includes(l) && l.toLowerCase().includes(labelInput.toLowerCase())).length > 0 && (
+                  {allLabels.filter((l) => !newItemLabels.includes(l.name) && l.name.toLowerCase().includes(labelInput.toLowerCase())).length > 0 && (
                     <div className="max-h-32 overflow-y-auto mb-2">
                       {allLabels
-                        .filter((l) => !newItemLabels.includes(l) && l.toLowerCase().includes(labelInput.toLowerCase()))
+                        .filter((l) => !newItemLabels.includes(l.name) && l.name.toLowerCase().includes(labelInput.toLowerCase()))
                         .map((label) => (
                           <button
-                            key={label}
+                            key={label.id}
                             type="button"
                             onClick={() => {
-                              setNewItemLabels([...newItemLabels, label])
+                              setNewItemLabels([...newItemLabels, label.name])
                               setLabelInput('')
                             }}
                             className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
                           >
-                            {label}
+                            {label.name}
                           </button>
                         ))}
                     </div>
@@ -443,7 +453,12 @@ export default function BoardPage() {
                   {newItemLabels.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200 dark:border-gray-700">
                       {newItemLabels.map((label) => (
-                        <LabelBadge key={label} label={label} onRemove={() => setNewItemLabels(newItemLabels.filter((l) => l !== label))} />
+                        <LabelBadge
+                          key={label}
+                          label={label}
+                          color={allLabels.find((l) => l.name === label)?.color}
+                          onRemove={() => setNewItemLabels(newItemLabels.filter((l) => l !== label))}
+                        />
                       ))}
                     </div>
                   )}
@@ -521,10 +536,11 @@ export default function BoardPage() {
             <span className="text-sm text-muted-foreground mr-1">Filter:</span>
             {allLabels.map((label) => (
               <LabelBadge
-                key={label}
-                label={label}
-                onClick={() => handleLabelFilter(label)}
-                isSelected={selectedLabel === label}
+                key={label.id}
+                label={label.name}
+                color={label.color}
+                onClick={() => handleLabelFilter(label.name)}
+                isSelected={selectedLabel === label.name}
               />
             ))}
             {selectedLabel && (

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import type { Item, ItemPriority, RecurrenceType } from '@/lib/api'
+import type { Item, ItemPriority, RecurrenceType, Label } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Check, Trash2, RotateCcw, Repeat } from 'lucide-react'
 import LabelBadge from '@/components/LabelBadge'
@@ -18,7 +18,7 @@ interface ItemCardProps {
   onUpdateDueDate: (dueAt: string | null) => void
   onUpdateRecurrence: (type: RecurrenceType | null, days: string[] | null) => void
   onDelete: () => void
-  allLabels?: string[]
+  allLabels?: Label[]
 }
 
 export default function ItemCard({
@@ -32,6 +32,7 @@ export default function ItemCard({
   allLabels = [],
 }: ItemCardProps) {
   const isDone = item.status === 'done'
+  const labelNames = (item.labels || []).map((l) => l.name)
 
   return (
     <motion.div
@@ -84,15 +85,16 @@ export default function ItemCard({
           </p>
           {(item.labels || []).map((label) => (
             <LabelBadge
-              key={label}
-              label={label}
-              onRemove={isDone ? undefined : () => onUpdateLabels((item.labels || []).filter((l) => l !== label))}
+              key={label.id}
+              label={label.name}
+              color={label.color}
+              onRemove={isDone ? undefined : () => onUpdateLabels(labelNames.filter((n) => n !== label.name))}
             />
           ))}
           {!isDone && (
             <LabelInput
-              existingLabels={item.labels || []}
-              onAddLabel={(label) => onUpdateLabels([...(item.labels || []), label])}
+              existingLabels={labelNames}
+              onAddLabel={(name) => onUpdateLabels([...labelNames, name])}
               allLabels={allLabels}
             />
           )}

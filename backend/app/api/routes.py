@@ -1,4 +1,5 @@
 import asyncio
+import colorsys
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,15 +8,72 @@ from datetime import datetime, timezone
 from typing import List
 
 from app.db import get_db
-from app.models import User, Board, Item
+from app.models import User, Board, Item, Label
 from app.models.item import ItemStatus
-from app.schemas import BoardResponse, BoardCreate, ItemResponse, ItemCreate, ItemUpdate
+from app.schemas import (
+    BoardResponse, BoardCreate,
+    ItemResponse, ItemCreate, ItemUpdate,
+    LabelResponse, LabelCreate, LabelUpdate,
+)
 from app.auth.deps import get_current_user
 from app.realtime.manager import manager
 from app.services.notifications import send_ntfy, build_ntfy_body, PRIORITY_MAP, TAG_MAP
 from app.services.recurrence import compute_next_due_date
 
 router = APIRouter(tags=["api"])
+
+
+# --- Label color helper (matches frontend djb2 hash) ---
+
+LABEL_HUES = [0, 25, 45, 120, 180, 200, 280, 320, 340]
+
+
+def _djb2_hash(s: str) -> int:
+    h = 5381
+    for c in s:
+        h = ((h << 5) + h) ^ ord(c)
+    return abs(h)
+
+
+def compute_label_color(name: str) -> str:
+    h = _djb2_hash(name.lower().strip())
+    hue = LABEL_HUES[h % len(LABEL_HUES)]
+    r, g, b = colorsys.hls_to_rgb(hue / 360, 0.92, 0.85)
+    return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
+
+
+async def _resolve_labels(
+    db: AsyncSession, board_id: int, label_names: list[str]
+) -> list[Label]:
+    """Resolve label name strings to Label objects, creating new labels as needed."""
+    labels = []
+    for name in label_names:
+        name = name.strip()
+        if not name:
+            continue
+        result = await db.execute(
+            select(Label).where(
+                Label.board_id == board_id,
+                Label.name_lower == name.lower(),
+            )
+        )
+        label = result.scalar_one_or_none()
+        if not label:
+            label = Label(
+                board_id=board_id,
+                name=name,
+                name_lower=name.lower(),
+                color=compute_label_color(name),
+            )
+            db.add(label)
+            await db.flush()
+        labels.append(label)
+    return labels
+
+
+def _label_names(item: Item) -> list[str]:
+    """Extract label name strings from an item's label relationship."""
+    return [l.name for l in item.labels]
 
 
 async def enrich_item_with_username(item: Item, db: AsyncSession) -> dict:
@@ -74,6 +132,121 @@ async def get_board(
     return board
 
 
+# ============ LABELS ============
+
+@router.get("/boards/{board_id}/labels", response_model=List[LabelResponse])
+async def get_labels(
+    board_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all labels for a board."""
+    result = await db.execute(
+        select(Label).where(Label.board_id == board_id).order_by(Label.name)
+    )
+    return result.scalars().all()
+
+
+@router.post("/boards/{board_id}/labels", response_model=LabelResponse, status_code=status.HTTP_201_CREATED)
+async def create_label(
+    board_id: int,
+    data: LabelCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new label for a board."""
+    result = await db.execute(select(Board).where(Board.id == board_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    # Check for duplicate
+    result = await db.execute(
+        select(Label).where(
+            Label.board_id == board_id,
+            Label.name_lower == data.name.lower(),
+        )
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Label already exists")
+
+    label = Label(
+        board_id=board_id,
+        name=data.name,
+        name_lower=data.name.lower(),
+        color=data.color or compute_label_color(data.name),
+    )
+    db.add(label)
+    await db.commit()
+    await db.refresh(label)
+
+    await manager.broadcast_to_board(
+        board_id, "label.created",
+        LabelResponse.model_validate(label).model_dump(mode="json"),
+    )
+    return label
+
+
+@router.patch("/labels/{label_id}", response_model=LabelResponse)
+async def update_label(
+    label_id: int,
+    data: LabelUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a label."""
+    result = await db.execute(select(Label).where(Label.id == label_id))
+    label = result.scalar_one_or_none()
+    if not label:
+        raise HTTPException(status_code=404, detail="Label not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        # Check for duplicate with new name
+        result = await db.execute(
+            select(Label).where(
+                Label.board_id == label.board_id,
+                Label.name_lower == update_data["name"].lower(),
+                Label.id != label_id,
+            )
+        )
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Label already exists")
+        label.name = update_data["name"]
+        label.name_lower = update_data["name"].lower()
+    if "color" in update_data:
+        label.color = update_data["color"]
+
+    await db.commit()
+    await db.refresh(label)
+
+    await manager.broadcast_to_board(
+        label.board_id, "label.updated",
+        LabelResponse.model_validate(label).model_dump(mode="json"),
+    )
+    return label
+
+
+@router.delete("/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_label(
+    label_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a label (cascade removes from items)."""
+    result = await db.execute(select(Label).where(Label.id == label_id))
+    label = result.scalar_one_or_none()
+    if not label:
+        raise HTTPException(status_code=404, detail="Label not found")
+
+    board_id = label.board_id
+    await db.delete(label)
+    await db.commit()
+
+    await manager.broadcast_to_board(
+        board_id, "label.deleted", {"id": label_id}
+    )
+
+
 # ============ ITEMS ============
 
 @router.get("/boards/{board_id}/items")
@@ -112,18 +285,21 @@ async def create_item(
     )
     max_position = result.scalar() or 0
 
+    # Resolve label names to Label objects
+    label_objects = await _resolve_labels(db, board_id, data.labels)
+
     item = Item(
         board_id=board_id,
         title=data.title,
         notes=data.notes,
         due_at=data.due_at,
         priority=data.priority,
-        labels=data.labels,
         recurrence_type=data.recurrence_type,
         recurrence_days=data.recurrence_days,
         position=max_position + 1,
         last_edited_by_user_id=current_user.id
     )
+    item.labels = label_objects
     db.add(item)
     await db.commit()
     await db.refresh(item)
@@ -179,6 +355,11 @@ async def update_item(
                 detail="Cannot modify priority, labels, or other fields on completed items. Reopen the item first."
             )
 
+    # Handle labels separately (relationship, not a simple column)
+    label_names = update_data.pop("labels", None)
+    if label_names is not None:
+        item.labels = await _resolve_labels(db, item.board_id, label_names)
+
     for field, value in update_data.items():
         setattr(item, field, value)
 
@@ -210,7 +391,7 @@ async def update_item(
     if newly_completed:
         body = build_ntfy_body(
             item.title,
-            item.labels or [],
+            _label_names(item),
             item.priority.value,
             completed_by=current_user.username,
         )
@@ -238,13 +419,13 @@ async def update_item(
                 title=item.title,
                 notes=item.notes,
                 priority=item.priority,
-                labels=item.labels or [],
                 recurrence_type=item.recurrence_type,
                 recurrence_days=item.recurrence_days,
                 due_at=next_due,
                 position=max_pos + 1,
                 last_edited_by_user_id=current_user.id,
             )
+            next_item.labels = list(item.labels)
             db.add(next_item)
             await db.commit()
             await db.refresh(next_item)
@@ -257,7 +438,7 @@ async def update_item(
             # Notify about the new recurring occurrence
             next_body = build_ntfy_body(
                 next_item.title,
-                next_item.labels or [],
+                _label_names(next_item),
                 next_item.priority.value,
                 due_at=next_due,
                 recurrence_type=next_item.recurrence_type,
