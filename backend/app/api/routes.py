@@ -266,6 +266,7 @@ async def update_label(
             raise HTTPException(status_code=409, detail="Label already exists")
         label.name = update_data["name"]
         label.name_lower = update_data["name"].lower()
+        label.english_name = None
     if "color" in update_data:
         label.color = update_data["color"]
 
@@ -414,6 +415,10 @@ async def update_item(
                 detail="Cannot modify priority, labels, or other fields on completed items. Reopen the item first."
             )
 
+    # Capture old values for re-translation check
+    old_title = item.title
+    old_notes = item.notes
+
     # Handle labels separately (relationship, not a simple column)
     label_names = update_data.pop("labels", None)
     if label_names is not None:
@@ -421,6 +426,12 @@ async def update_item(
 
     for field, value in update_data.items():
         setattr(item, field, value)
+
+    # Clear stale translations when source text changes
+    if "title" in update_data and item.title != old_title:
+        item.title_en = None
+    if "notes" in update_data and item.notes != old_notes:
+        item.notes_en = None
 
     # Track completion
     newly_completed = data.status == ItemStatus.DONE and item.completed_at is None
@@ -510,8 +521,10 @@ async def update_item(
             ))
             asyncio.create_task(_translate_item(next_item.id, next_item.title, next_item.notes))
 
-    # Translate if title or notes changed
-    if "title" in update_data or "notes" in update_data:
+    # Translate only if title or notes actually changed
+    title_changed = "title" in update_data and item.title != old_title
+    notes_changed = "notes" in update_data and item.notes != old_notes
+    if title_changed or notes_changed:
         asyncio.create_task(_translate_item(item.id, item.title, item.notes))
 
     return enriched_item
