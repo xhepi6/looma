@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import { useBoardSocket } from '@/hooks/useBoardSocket'
@@ -38,6 +38,11 @@ const PRIORITY_ORDER: Record<string, number> = {
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>()
   const boardId = Number(id)
+
+  if (!id || isNaN(boardId)) {
+    return <Navigate to="/board/1" replace />
+  }
+
   const queryClient = useQueryClient()
   const { status: wsStatus } = useBoardSocket(boardId)
 

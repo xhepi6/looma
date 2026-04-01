@@ -34,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               </Route>
               <Route path="/" element={<Navigate to="/board/1" replace />} />
               <Route path="/board" element={<Navigate to="/board/1" replace />} />
+              <Route path="*" element={<Navigate to="/board/1" replace />} />
             </Routes>
             <Toaster />
           </AuthProvider>
