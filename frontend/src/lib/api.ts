@@ -100,11 +100,11 @@ export const deleteLabel = (labelId: number) =>
   fetchApi<null>(`/labels/${labelId}`, { method: 'DELETE' })
 
 // Items
-export const getItems = () =>
-  fetchApi<Item[]>(`/boards/1/items`)
+export const getItems = (boardId: number) =>
+  fetchApi<Item[]>(`/boards/${boardId}/items`)
 
-export const createItem = (data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority; labels?: string[]; recurrence_type?: RecurrenceType; recurrence_days?: string[] }) =>
-  fetchApi<Item>(`/boards/1/items`, {
+export const createItem = (boardId: number, data: { title: string; notes?: string; due_at?: string; priority?: ItemPriority; labels?: string[]; recurrence_type?: RecurrenceType; recurrence_days?: string[] }) =>
+  fetchApi<Item>(`/boards/${boardId}/items`, {
     method: 'POST',
     body: JSON.stringify(data),
   })
