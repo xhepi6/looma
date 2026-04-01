@@ -7,6 +7,7 @@ class LabelResponse(BaseModel):
     name: str
     color: str
     board_id: int
+    english_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

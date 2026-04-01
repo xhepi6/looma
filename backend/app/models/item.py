@@ -34,6 +34,8 @@ class Item(Base):
     board_id = Column(Integer, ForeignKey("boards.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
+    title_en = Column(String(500), nullable=True)
+    notes_en = Column(Text, nullable=True)
     status = Column(Enum(ItemStatus), default=ItemStatus.TODO, nullable=False)
     priority = Column(Enum(ItemPriority), default=ItemPriority.MEDIUM, nullable=False)
     due_at = Column(DateTime(timezone=True), nullable=True)
