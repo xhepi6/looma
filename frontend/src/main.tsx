@@ -7,6 +7,8 @@ import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/hooks/useTheme'
 import LoginPage from '@/pages/LoginPage'
 import BoardPage from '@/pages/BoardPage'
+import SettingsPage from '@/pages/SettingsPage'
+import AppLayout from '@/components/AppLayout'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -26,8 +28,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/board" element={<BoardPage />} />
-              <Route path="/" element={<Navigate to="/board" replace />} />
+              <Route element={<AppLayout />}>
+                <Route path="/board/:id" element={<BoardPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="/" element={<Navigate to="/board/1" replace />} />
+              <Route path="/board" element={<Navigate to="/board/1" replace />} />
             </Routes>
             <Toaster />
           </AuthProvider>
