@@ -32,6 +32,8 @@ class ItemResponse(BaseModel):
     board_id: int
     title: str
     notes: Optional[str] = None
+    title_en: Optional[str] = None
+    notes_en: Optional[str] = None
     status: ItemStatus
     priority: ItemPriority = ItemPriority.MEDIUM
     due_at: Optional[datetime] = None
