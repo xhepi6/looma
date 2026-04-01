@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from datetime import datetime, timezone
 from typing import List
 
-from app.db import get_db
+from app.db import get_db, async_session_maker
 from app.models import User, Board, Item, Label
 from app.models.item import ItemStatus
 from app.schemas import (
@@ -19,6 +19,7 @@ from app.auth.deps import get_current_user
 from app.realtime.manager import manager
 from app.services.notifications import send_ntfy, build_ntfy_body, PRIORITY_MAP, TAG_MAP
 from app.services.recurrence import compute_next_due_date
+from app.services.translation import translate_text
 
 router = APIRouter(tags=["api"])
 
@@ -67,6 +68,7 @@ async def _resolve_labels(
             )
             db.add(label)
             await db.flush()
+            asyncio.create_task(_translate_label(label.id, label.name))
         labels.append(label)
     return labels
 
@@ -85,6 +87,54 @@ async def enrich_item_with_username(item: Item, db: AsyncSession) -> dict:
         )
         response['completed_by_username'] = result.scalar_one_or_none()
     return response
+
+
+async def _translate_item(item_id: int, title: str, notes: str | None):
+    """Background task: translate item fields and broadcast update."""
+    title_en = await translate_text(title)
+    notes_en = await translate_text(notes) if notes else None
+
+    if title_en is None and notes_en is None:
+        return
+
+    async with async_session_maker() as db:
+        result = await db.execute(select(Item).where(Item.id == item_id))
+        item = result.scalar_one_or_none()
+        if not item:
+            return
+
+        if title_en is not None:
+            item.title_en = title_en
+        if notes_en is not None:
+            item.notes_en = notes_en
+
+        await db.commit()
+        await db.refresh(item)
+
+        enriched = await enrich_item_with_username(item, db)
+        await manager.broadcast_to_board(item.board_id, "item.updated", enriched)
+
+
+async def _translate_label(label_id: int, name: str):
+    """Background task: translate label name and broadcast update."""
+    english_name = await translate_text(name)
+    if english_name is None:
+        return
+
+    async with async_session_maker() as db:
+        result = await db.execute(select(Label).where(Label.id == label_id))
+        label = result.scalar_one_or_none()
+        if not label:
+            return
+
+        label.english_name = english_name
+        await db.commit()
+        await db.refresh(label)
+
+        await manager.broadcast_to_board(
+            label.board_id, "label.updated",
+            LabelResponse.model_validate(label).model_dump(mode="json"),
+        )
 
 
 # ============ BOARDS ============
@@ -183,6 +233,9 @@ async def create_label(
         board_id, "label.created",
         LabelResponse.model_validate(label).model_dump(mode="json"),
     )
+
+    asyncio.create_task(_translate_label(label.id, label.name))
+
     return label
 
 
@@ -223,6 +276,10 @@ async def update_label(
         label.board_id, "label.updated",
         LabelResponse.model_validate(label).model_dump(mode="json"),
     )
+
+    if "name" in update_data:
+        asyncio.create_task(_translate_label(label.id, label.name))
+
     return label
 
 
@@ -324,6 +381,8 @@ async def create_item(
         priority=PRIORITY_MAP.get(data.priority.value, "default"),
         tags=TAG_MAP.get(data.priority.value, "blue_circle"),
     ))
+
+    asyncio.create_task(_translate_item(item.id, item.title, item.notes))
 
     return enriched_item
 
@@ -449,6 +508,11 @@ async def update_item(
                 priority=PRIORITY_MAP.get(next_item.priority.value, "default"),
                 tags=f"repeat,{TAG_MAP.get(next_item.priority.value, 'blue_circle')}",
             ))
+            asyncio.create_task(_translate_item(next_item.id, next_item.title, next_item.notes))
+
+    # Translate if title or notes changed
+    if "title" in update_data or "notes" in update_data:
+        asyncio.create_task(_translate_item(item.id, item.title, item.notes))
 
     return enriched_item
 
