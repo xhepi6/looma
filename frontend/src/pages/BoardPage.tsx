@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/hooks/useAuth'
 import { useBoardSocket } from '@/hooks/useBoardSocket'
-import { useTheme } from '@/hooks/useTheme'
 import * as api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +15,7 @@ import PrioritySelect from '@/components/PrioritySelect'
 import RecurrenceSelect from '@/components/RecurrenceSelect'
 import { format } from 'date-fns'
 import type { RecurrenceType } from '@/lib/api'
-import { LogOut, Plus, ChevronDown, ChevronRight, X, Sun, Moon, ArrowUpDown, Check, CheckCircle, Search, Calendar, Tag } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, X, ArrowUpDown, Check, Search, Calendar, Tag } from 'lucide-react'
 
 type SortOption = 'priority' | 'newest' | 'oldest' | 'due-date'
 
@@ -37,11 +36,10 @@ const PRIORITY_ORDER: Record<string, number> = {
 }
 
 export default function BoardPage() {
-  const boardId = 1
-  const { logout } = useAuth()
+  const { id } = useParams<{ id: string }>()
+  const boardId = Number(id)
   const queryClient = useQueryClient()
-  const { status: wsStatus } = useBoardSocket()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { status: wsStatus } = useBoardSocket(boardId)
 
   const [newItemTitle, setNewItemTitle] = useState('')
   const [newItemDueDate, setNewItemDueDate] = useState<Date | null>(null)
@@ -122,7 +120,7 @@ export default function BoardPage() {
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['items', boardId],
-    queryFn: () => api.getItems(),
+    queryFn: () => api.getItems(boardId),
   })
 
   const { data: allLabels = [] } = useQuery({
@@ -131,7 +129,7 @@ export default function BoardPage() {
   })
 
   const createItemMutation = useMutation({
-    mutationFn: (data: Parameters<typeof api.createItem>[0]) => api.createItem(data),
+    mutationFn: (data: Parameters<typeof api.createItem>[1]) => api.createItem(boardId, data),
     onSuccess: () => {
       // Don't add item here - WebSocket will handle it to avoid duplicates
       // Only refetch if WebSocket is disconnected
@@ -245,7 +243,7 @@ export default function BoardPage() {
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (newItemTitle.trim()) {
-      const data: Parameters<typeof api.createItem>[0] = { title: newItemTitle.trim(), priority: newItemPriority }
+      const data: Parameters<typeof api.createItem>[1] = { title: newItemTitle.trim(), priority: newItemPriority }
       if (newItemDueDate) {
         const d = newItemDueDate
         data.due_at = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)).toISOString()
@@ -294,45 +292,15 @@ export default function BoardPage() {
     setSelectedLabel(selectedLabel === label ? null : label)
   }
 
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-  }
-
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex items-center justify-center py-20">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-primary flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            Looma
-          </h1>
-          <div className="flex items-center gap-2">
-            {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
-              {resolvedTheme === 'dark' ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-            {/* Logout */}
-            <Button variant="ghost" size="icon" onClick={logout} title="Logout">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Add item form */}
         <form onSubmit={handleAddItem} className="mb-6">
@@ -637,6 +605,5 @@ export default function BoardPage() {
           )}
         </div>
       </main>
-    </div>
   )
 }
