@@ -15,6 +15,9 @@ services:
       - SEED_USER_1_PASSWORD=${SEED_USER_1_PASSWORD:-password123}
       - SEED_USER_2_USERNAME=${SEED_USER_2_USERNAME:-bob}
       - SEED_USER_2_PASSWORD=${SEED_USER_2_PASSWORD:-password123}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - TRANSLATION_MODEL=${TRANSLATION_MODEL:-google/gemini-2.0-flash-001}
+      - TRANSLATION_ENABLED=${TRANSLATION_ENABLED:-true}
     volumes:
       - sqlite_data:/data
     networks:

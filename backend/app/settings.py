@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Translation (OpenRouter)
     openrouter_api_key: Optional[str] = None
-    translation_model: str = "google/gemma-2-9b-it"
+    translation_model: str = "google/gemini-2.0-flash-001"
     translation_enabled: bool = True
 
     class Config:
