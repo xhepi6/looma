@@ -17,8 +17,7 @@ const processedEvents = new Set<string>()
 // Track recently added item IDs to prevent race conditions with duplicate additions
 const recentlyAddedItems = new Set<number>()
 
-export function useBoardSocket() {
-  const boardId = 1
+export function useBoardSocket(boardId: number) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number | null>(null)
