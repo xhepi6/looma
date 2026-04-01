@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     seed_user_2_username: str = "bob"
     seed_user_2_password: str = "password123"
 
+    # Translation (OpenRouter)
+    openrouter_api_key: Optional[str] = None
+    translation_model: str = "google/gemma-2-9b-it"
+    translation_enabled: bool = True
+
     class Config:
         env_file = ".env"
         extra = "ignore"
