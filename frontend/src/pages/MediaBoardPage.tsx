@@ -24,7 +24,7 @@ interface MediaBoardPageProps {
 
 export default function MediaBoardPage({ boardId }: MediaBoardPageProps) {
   const queryClient = useQueryClient()
-  useBoardSocket(boardId)
+  const { status: wsStatus } = useBoardSocket(boardId)
 
   // Form state
   const [newTitle, setNewTitle] = useState('')
@@ -43,6 +43,9 @@ export default function MediaBoardPage({ boardId }: MediaBoardPageProps) {
     mutationFn: (data: { title: string; media_type: MediaType }) =>
       api.createMedia(boardId, data),
     onSuccess: () => {
+      if (wsStatus !== 'connected') {
+        queryClient.invalidateQueries({ queryKey: ['media', boardId] })
+      }
       setNewTitle('')
     },
   })
@@ -57,6 +60,11 @@ export default function MediaBoardPage({ boardId }: MediaBoardPageProps) {
       )
       return { previous }
     },
+    onSuccess: () => {
+      if (wsStatus !== 'connected') {
+        queryClient.invalidateQueries({ queryKey: ['media', boardId] })
+      }
+    },
     onError: (_, __, context) => {
       queryClient.setQueryData(['media', boardId], context?.previous)
     },
@@ -70,6 +78,11 @@ export default function MediaBoardPage({ boardId }: MediaBoardPageProps) {
         old?.filter((m) => m.id !== id)
       )
       return { previous }
+    },
+    onSuccess: () => {
+      if (wsStatus !== 'connected') {
+        queryClient.invalidateQueries({ queryKey: ['media', boardId] })
+      }
     },
     onError: (_, __, context) => {
       queryClient.setQueryData(['media', boardId], context?.previous)
