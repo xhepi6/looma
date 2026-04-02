@@ -50,6 +50,26 @@ export default function MediaCard({ item, onUpdateStatus, onDelete }: MediaCardP
         <p className={cn('text-sm font-medium truncate', isWatched && 'line-through')}>
           {item.title}
         </p>
+        {(item.year || item.rating != null || item.genre) && (
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {item.year && (
+              <span className="text-[10px] text-muted-foreground">{item.year}</span>
+            )}
+            {item.rating != null && (
+              <span className="text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
+                ★ {item.rating.toFixed(1)}
+              </span>
+            )}
+            {item.seasons != null && (
+              <span className="text-[10px] text-muted-foreground">{item.seasons}S</span>
+            )}
+            {item.genre && (
+              <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                {item.genre}
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-2 mt-0.5">
           <span className={cn(
             'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
@@ -65,6 +85,11 @@ export default function MediaCard({ item, onUpdateStatus, onDelete }: MediaCardP
             </span>
           )}
         </div>
+        {item.synopsis && (
+          <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+            {item.synopsis}
+          </p>
+        )}
       </div>
 
       {/* Status dropdown */}

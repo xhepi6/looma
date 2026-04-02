@@ -21,6 +21,7 @@ from app.realtime.manager import manager
 from app.services.notifications import send_ntfy, build_ntfy_body, PRIORITY_MAP, TAG_MAP
 from app.services.recurrence import compute_next_due_date
 from app.services.translation import translate_text
+from app.services.tmdb import fetch_tmdb_metadata
 
 router = APIRouter(tags=["api"])
 
@@ -162,6 +163,29 @@ async def _translate_media_item(media_item_id: int, title: str):
             return
 
         media_item.title_en = title_en
+        await db.commit()
+        await db.refresh(media_item)
+
+        enriched = await enrich_media_item_with_username(media_item, db)
+        await manager.broadcast_to_board(media_item.board_id, "media.updated", enriched)
+
+
+async def _enrich_media_item_tmdb(media_item_id: int, title: str, media_type: str):
+    """Background task: fetch TMDB metadata and broadcast update."""
+    metadata = await fetch_tmdb_metadata(title, media_type)
+    if metadata is None:
+        return
+
+    async with async_session_maker() as db:
+        result = await db.execute(select(MediaItem).where(MediaItem.id == media_item_id))
+        media_item = result.scalar_one_or_none()
+        if not media_item:
+            return
+
+        for field, value in metadata.items():
+            if value is not None:
+                setattr(media_item, field, value)
+
         await db.commit()
         await db.refresh(media_item)
 
@@ -642,6 +666,7 @@ async def create_media_item(
 
     await manager.broadcast_to_board(board_id, "media.created", enriched)
     asyncio.create_task(_translate_media_item(media_item.id, media_item.title))
+    asyncio.create_task(_enrich_media_item_tmdb(media_item.id, media_item.title, media_item.media_type))
 
     return enriched
 
@@ -665,9 +690,15 @@ async def update_media_item(
     for field, value in update_data.items():
         setattr(media_item, field, value)
 
-    # Clear stale translation when title changes
+    # Clear stale translation and TMDB metadata when title changes
     if "title" in update_data and media_item.title != old_title:
         media_item.title_en = None
+        media_item.year = None
+        media_item.genre = None
+        media_item.rating = None
+        media_item.synopsis = None
+        media_item.seasons = None
+        media_item.tmdb_id = None
 
     await db.commit()
     await db.refresh(media_item)
@@ -677,6 +708,7 @@ async def update_media_item(
 
     if "title" in update_data and media_item.title != old_title:
         asyncio.create_task(_translate_media_item(media_item.id, media_item.title))
+        asyncio.create_task(_enrich_media_item_tmdb(media_item.id, media_item.title, media_item.media_type))
 
     return enriched
 
