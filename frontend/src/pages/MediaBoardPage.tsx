@@ -42,10 +42,7 @@ export default function MediaBoardPage({ boardId }: MediaBoardPageProps) {
   const createMutation = useMutation({
     mutationFn: (data: { title: string; media_type: MediaType }) =>
       api.createMedia(boardId, data),
-    onSuccess: (newItem) => {
-      queryClient.setQueryData<MediaItem[]>(['media', boardId], (old) =>
-        old ? [...old, newItem].sort((a, b) => a.position - b.position) : [newItem]
-      )
+    onSuccess: () => {
       setNewTitle('')
     },
   })
