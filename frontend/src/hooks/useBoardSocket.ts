@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { Item } from '@/lib/api'
+import type { Item, MediaItem } from '@/lib/api'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -82,6 +82,35 @@ export function useBoardSocket(boardId: number) {
         // Refetch labels and items (items embed label objects)
         queryClient.invalidateQueries({ queryKey: ['labels', event.board_id] })
         queryClient.invalidateQueries({ queryKey: ['items', event.board_id] })
+        break
+
+      case 'media.created':
+        queryClient.setQueryData<MediaItem[]>(['media', event.board_id], (old) => {
+          const media = event.item as MediaItem | undefined
+          if (!old || !media) return old
+          if (old.some((m) => m.id === media.id)) {
+            return old.map((m) => m.id === media.id ? media : m)
+          }
+          return [...old, media].sort((a, b) => a.position - b.position)
+        })
+        break
+
+      case 'media.updated':
+        queryClient.setQueryData<MediaItem[]>(['media', event.board_id], (old) => {
+          const media = event.item as MediaItem | undefined
+          if (!old || !media) return old
+          return old
+            .map((m) => (m.id === media.id ? media : m))
+            .sort((a, b) => a.position - b.position)
+        })
+        break
+
+      case 'media.deleted':
+        queryClient.setQueryData<MediaItem[]>(['media', event.board_id], (old) => {
+          const media = event.item as { id: number } | undefined
+          if (!old || !media) return old
+          return old.filter((m) => m.id !== media.id)
+        })
         break
     }
   }, [queryClient])
