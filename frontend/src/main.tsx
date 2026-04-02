@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/hooks/useTheme'
 import LoginPage from '@/pages/LoginPage'
-import BoardPage from '@/pages/BoardPage'
+import BoardRouter from '@/components/BoardRouter'
 import SettingsPage from '@/pages/SettingsPage'
 import AppLayout from '@/components/AppLayout'
 import './index.css'
@@ -29,7 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route element={<AppLayout />}>
-                <Route path="/board/:id" element={<BoardPage />} />
+                <Route path="/board/:id" element={<BoardRouter />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               <Route path="/" element={<Navigate to="/board/1" replace />} />

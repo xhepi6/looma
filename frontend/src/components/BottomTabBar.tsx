@@ -1,30 +1,32 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ListTodo, Tv, MessageCircle, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface Tab {
-  label: string
-  icon: React.ElementType
-  path: string | null
-  enabled: boolean
-}
-
-const tabs: Tab[] = [
-  { label: 'Tasks', icon: ListTodo, path: '/board/1', enabled: true },
-  { label: 'Watch', icon: Tv, path: null, enabled: false },
-  { label: 'Chat', icon: MessageCircle, path: null, enabled: false },
-  { label: 'Settings', icon: Settings, path: '/settings', enabled: true },
-]
+import * as api from '@/lib/api'
 
 export default function BottomTabBar() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isActive = (tab: Tab) => {
+  const { data: boards = [] } = useQuery({
+    queryKey: ['boards'],
+    queryFn: api.getBoards,
+  })
+
+  const taskBoard = boards.find((b) => b.board_type === 'task')
+  const mediaBoard = boards.find((b) => b.board_type === 'media')
+
+  const tabs = [
+    { label: 'Tasks', icon: ListTodo, path: taskBoard ? `/board/${taskBoard.id}` : '/board/1', enabled: true },
+    { label: 'Watch', icon: Tv, path: mediaBoard ? `/board/${mediaBoard.id}` : null, enabled: !!mediaBoard },
+    { label: 'Chat', icon: MessageCircle, path: null, enabled: false },
+    { label: 'Settings', icon: Settings, path: '/settings', enabled: true },
+  ]
+
+  const isActive = (tab: typeof tabs[number]) => {
     if (!tab.path) return false
     if (tab.path === '/settings') return location.pathname === '/settings'
-    // Match any /board/* path for the Tasks tab
-    return location.pathname.startsWith('/board')
+    return location.pathname === tab.path
   }
 
   return (
