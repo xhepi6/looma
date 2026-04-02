@@ -8,12 +8,13 @@ from datetime import datetime, timezone
 from typing import List
 
 from app.db import get_db, async_session_maker
-from app.models import User, Board, Item, Label
+from app.models import User, Board, Item, Label, MediaItem
 from app.models.item import ItemStatus
 from app.schemas import (
     BoardResponse, BoardCreate,
     ItemResponse, ItemCreate, ItemUpdate,
     LabelResponse, LabelCreate, LabelUpdate,
+    MediaItemResponse, MediaItemCreate, MediaItemUpdate,
 )
 from app.auth.deps import get_current_user
 from app.realtime.manager import manager
@@ -135,6 +136,37 @@ async def _translate_label(label_id: int, name: str):
             label.board_id, "label.updated",
             LabelResponse.model_validate(label).model_dump(mode="json"),
         )
+
+
+async def enrich_media_item_with_username(media_item: MediaItem, db: AsyncSession) -> dict:
+    """Add added_by_username to media item response."""
+    response = MediaItemResponse.model_validate(media_item).model_dump(mode="json")
+    if media_item.added_by_user_id:
+        result = await db.execute(
+            select(User.username).where(User.id == media_item.added_by_user_id)
+        )
+        response['added_by_username'] = result.scalar_one_or_none()
+    return response
+
+
+async def _translate_media_item(media_item_id: int, title: str):
+    """Background task: translate media item title and broadcast update."""
+    title_en = await translate_text(title)
+    if title_en is None:
+        return
+
+    async with async_session_maker() as db:
+        result = await db.execute(select(MediaItem).where(MediaItem.id == media_item_id))
+        media_item = result.scalar_one_or_none()
+        if not media_item:
+            return
+
+        media_item.title_en = title_en
+        await db.commit()
+        await db.refresh(media_item)
+
+        enriched = await enrich_media_item_with_username(media_item, db)
+        await manager.broadcast_to_board(media_item.board_id, "media.updated", enriched)
 
 
 # ============ BOARDS ============
@@ -554,3 +586,114 @@ async def delete_item(
         "item.deleted",
         {"id": item_id}
     )
+
+
+# ============ MEDIA ITEMS ============
+
+@router.get("/boards/{board_id}/media")
+async def get_media_items(
+    board_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all media items for a board, ordered by position."""
+    result = await db.execute(
+        select(MediaItem)
+        .where(MediaItem.board_id == board_id)
+        .order_by(MediaItem.position.asc(), MediaItem.updated_at.desc())
+    )
+    items = result.scalars().all()
+    return [await enrich_media_item_with_username(item, db) for item in items]
+
+
+@router.post("/boards/{board_id}/media", response_model=MediaItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_media_item(
+    board_id: int,
+    data: MediaItemCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new media item in a board."""
+    result = await db.execute(select(Board).where(Board.id == board_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    # Get max position
+    result = await db.execute(
+        select(func.coalesce(func.max(MediaItem.position), 0))
+        .where(MediaItem.board_id == board_id)
+    )
+    max_position = result.scalar() or 0
+
+    media_item = MediaItem(
+        board_id=board_id,
+        title=data.title,
+        media_type=data.media_type,
+        status=data.status,
+        position=max_position + 1,
+        added_by_user_id=current_user.id,
+    )
+    db.add(media_item)
+    await db.commit()
+    await db.refresh(media_item)
+
+    enriched = await enrich_media_item_with_username(media_item, db)
+
+    await manager.broadcast_to_board(board_id, "media.created", enriched)
+    asyncio.create_task(_translate_media_item(media_item.id, media_item.title))
+
+    return enriched
+
+
+@router.patch("/media/{media_item_id}", response_model=MediaItemResponse)
+async def update_media_item(
+    media_item_id: int,
+    data: MediaItemUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a media item."""
+    result = await db.execute(select(MediaItem).where(MediaItem.id == media_item_id))
+    media_item = result.scalar_one_or_none()
+    if not media_item:
+        raise HTTPException(status_code=404, detail="Media item not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    old_title = media_item.title
+
+    for field, value in update_data.items():
+        setattr(media_item, field, value)
+
+    # Clear stale translation when title changes
+    if "title" in update_data and media_item.title != old_title:
+        media_item.title_en = None
+
+    await db.commit()
+    await db.refresh(media_item)
+
+    enriched = await enrich_media_item_with_username(media_item, db)
+    await manager.broadcast_to_board(media_item.board_id, "media.updated", enriched)
+
+    if "title" in update_data and media_item.title != old_title:
+        asyncio.create_task(_translate_media_item(media_item.id, media_item.title))
+
+    return enriched
+
+
+@router.delete("/media/{media_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_media_item(
+    media_item_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a media item."""
+    result = await db.execute(select(MediaItem).where(MediaItem.id == media_item_id))
+    media_item = result.scalar_one_or_none()
+    if not media_item:
+        raise HTTPException(status_code=404, detail="Media item not found")
+
+    board_id = media_item.board_id
+    await db.delete(media_item)
+    await db.commit()
+
+    await manager.broadcast_to_board(board_id, "media.deleted", {"id": media_item_id})
