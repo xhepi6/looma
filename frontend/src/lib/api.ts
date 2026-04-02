@@ -4,6 +4,7 @@ export interface User {
   id: number
   username: string
   is_active: boolean
+  created_at: string | null
 }
 
 export interface Board {
@@ -76,6 +77,12 @@ export const logout = () =>
   fetchApi<{ message: string }>('/auth/logout', { method: 'POST' })
 
 export const getMe = () => fetchApi<User>('/auth/me')
+
+export const changePassword = (newPassword: string, confirmPassword: string) =>
+  fetchApi<{ message: string }>('/auth/me/password', {
+    method: 'PATCH',
+    body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword }),
+  })
 
 // Boards
 export const getBoards = () => fetchApi<Board[]>('/boards')
