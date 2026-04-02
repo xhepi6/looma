@@ -1,18 +1,18 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 
 class MediaItemCreate(BaseModel):
     title: str
-    media_type: str
-    status: str = "want_to_watch"
+    media_type: Literal["movie", "tv_show"]
+    status: Literal["want_to_watch", "watching", "watched"] = "want_to_watch"
 
 
 class MediaItemUpdate(BaseModel):
     title: Optional[str] = None
-    media_type: Optional[str] = None
-    status: Optional[str] = None
+    media_type: Optional[Literal["movie", "tv_show"]] = None
+    status: Optional[Literal["want_to_watch", "watching", "watched"]] = None
 
 
 class MediaItemResponse(BaseModel):

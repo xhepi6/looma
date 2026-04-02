@@ -190,6 +190,7 @@ async def create_board(
     """Create a new board."""
     board = Board(
         name=data.name,
+        board_type=data.board_type,
         created_by_user_id=current_user.id
     )
     db.add(board)
