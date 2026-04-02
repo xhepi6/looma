@@ -9,6 +9,7 @@ export interface User {
 export interface Board {
   id: number
   name: string
+  board_type: string
   is_default: boolean
 }
 
@@ -117,3 +118,39 @@ export const updateItem = (itemId: number, data: Partial<Pick<Item, 'title' | 'n
 
 export const deleteItem = (itemId: number) =>
   fetchApi<null>(`/items/${itemId}`, { method: 'DELETE' })
+
+// Media
+export type MediaType = 'movie' | 'tv_show'
+export type MediaStatus = 'want_to_watch' | 'watching' | 'watched'
+
+export interface MediaItem {
+  id: number
+  board_id: number
+  title: string
+  title_en: string | null
+  media_type: MediaType
+  status: MediaStatus
+  position: number
+  added_by_user_id: number | null
+  added_by_username: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const getMedia = (boardId: number) =>
+  fetchApi<MediaItem[]>(`/boards/${boardId}/media`)
+
+export const createMedia = (boardId: number, data: { title: string; media_type: MediaType; status?: MediaStatus }) =>
+  fetchApi<MediaItem>(`/boards/${boardId}/media`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const updateMedia = (mediaId: number, data: { title?: string; media_type?: MediaType; status?: MediaStatus }) =>
+  fetchApi<MediaItem>(`/media/${mediaId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+
+export const deleteMedia = (mediaId: number) =>
+  fetchApi<null>(`/media/${mediaId}`, { method: 'DELETE' })
