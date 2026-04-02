@@ -8,6 +8,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    confirm_password: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
