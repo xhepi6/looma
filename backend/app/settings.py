@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     translation_model: str = "google/gemini-2.0-flash-001"
     translation_enabled: bool = True
 
+    # TMDB metadata enrichment (optional)
+    tmdb_api_key: Optional[str] = None
+    tmdb_enabled: bool = True
+
     class Config:
         env_file = ".env"
         extra = "ignore"

@@ -23,6 +23,12 @@ class MediaItemResponse(BaseModel):
     media_type: str
     status: str
     position: float
+    year: Optional[int] = None
+    genre: Optional[str] = None
+    rating: Optional[float] = None
+    synopsis: Optional[str] = None
+    seasons: Optional[int] = None
+    tmdb_id: Optional[int] = None
     added_by_user_id: Optional[int] = None
     added_by_username: Optional[str] = None
     created_at: Optional[datetime] = None

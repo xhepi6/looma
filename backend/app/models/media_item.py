@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Text
 from sqlalchemy.sql import func
 
 from app.db.engine import Base
@@ -27,6 +27,12 @@ class MediaItem(Base):
     media_type = Column(String(20), nullable=False)
     status = Column(String(20), nullable=False, server_default="want_to_watch")
     position = Column(Float, default=0.0, nullable=False)
+    year = Column(Integer, nullable=True)
+    genre = Column(String(500), nullable=True)
+    rating = Column(Float, nullable=True)
+    synopsis = Column(Text, nullable=True)
+    seasons = Column(Integer, nullable=True)
+    tmdb_id = Column(Integer, nullable=True)
     added_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

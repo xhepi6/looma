@@ -131,6 +131,12 @@ export interface MediaItem {
   media_type: MediaType
   status: MediaStatus
   position: number
+  year: number | null
+  genre: string | null
+  rating: number | null
+  synopsis: string | null
+  seasons: number | null
+  tmdb_id: number | null
   added_by_user_id: number | null
   added_by_username: string | null
   created_at: string
