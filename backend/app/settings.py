@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     translation_model: str = "google/gemini-2.0-flash-001"
     translation_enabled: bool = True
 
+    # Chat agent (PydanticAI + OpenRouter)
+    chat_model: str = "google/gemini-2.0-flash-001"
+    chat_enabled: bool = True
+    chat_rate_limit: int = 20
+
     # TMDB metadata enrichment (optional)
     tmdb_api_key: Optional[str] = None
     tmdb_enabled: bool = True

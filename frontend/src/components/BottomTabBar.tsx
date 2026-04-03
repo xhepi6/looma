@@ -19,13 +19,13 @@ export default function BottomTabBar() {
   const tabs = [
     { label: 'Tasks', icon: ListTodo, path: taskBoard ? `/board/${taskBoard.id}` : '/board/1', enabled: true },
     { label: 'Watch', icon: Tv, path: mediaBoard ? `/board/${mediaBoard.id}` : null, enabled: !!mediaBoard },
-    { label: 'Chat', icon: MessageCircle, path: null, enabled: false },
+    { label: 'Chat', icon: MessageCircle, path: '/chat', enabled: true },
     { label: 'Settings', icon: Settings, path: '/settings', enabled: true },
   ]
 
   const isActive = (tab: typeof tabs[number]) => {
     if (!tab.path) return false
-    if (tab.path === '/settings') return location.pathname === '/settings'
+    if (tab.path === '/settings' || tab.path === '/chat') return location.pathname === tab.path
     return location.pathname === tab.path
   }
 

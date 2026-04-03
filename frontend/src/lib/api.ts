@@ -167,3 +167,27 @@ export const updateMedia = (mediaId: number, data: { title?: string; media_type?
 
 export const deleteMedia = (mediaId: number) =>
   fetchApi<null>(`/media/${mediaId}`, { method: 'DELETE' })
+
+// Chat
+export interface ChatMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+export const getChatHistory = () => fetchApi<ChatMessage[]>('/chat/history')
+
+export async function sendChatMessage(content: string): Promise<Response> {
+  const response = await fetch(`${API_BASE}/chat`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(error.detail || 'Chat request failed')
+  }
+  return response
+}
