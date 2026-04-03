@@ -10,6 +10,7 @@ from app.settings import settings
 from app.db import init_db, async_session_maker
 from app.auth.routes import router as auth_router
 from app.api.routes import router as api_router
+from app.agent.routes import router as chat_router
 from app.realtime.routes import router as ws_router
 from app.services.seed import seed_database
 
@@ -76,6 +77,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(api_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 app.include_router(ws_router)
 
 

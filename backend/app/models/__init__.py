@@ -4,5 +4,6 @@ from .board import Board
 from .label import Label
 from .item import Item
 from .media_item import MediaItem
+from .chat_message import ChatMessage
 
-__all__ = ["User", "Session", "Board", "Label", "Item", "MediaItem"]
+__all__ = ["User", "Session", "Board", "Label", "Item", "MediaItem", "ChatMessage"]

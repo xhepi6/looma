@@ -7,6 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/hooks/useTheme'
 import LoginPage from '@/pages/LoginPage'
 import BoardRouter from '@/components/BoardRouter'
+import ChatPage from '@/pages/ChatPage'
 import SettingsPage from '@/pages/SettingsPage'
 import AppLayout from '@/components/AppLayout'
 import './index.css'
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/login" element={<LoginPage />} />
               <Route element={<AppLayout />}>
                 <Route path="/board/:id" element={<BoardRouter />} />
+                <Route path="/chat" element={<ChatPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               <Route path="/" element={<Navigate to="/board/1" replace />} />

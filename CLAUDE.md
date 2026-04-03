@@ -3,6 +3,15 @@
 - Do not include "Co-Authored-By" lines in commit messages
 - Do not write unit tests or integration tests
 
+## Running Commands
+
+- **All commands must be run via Docker Compose** using the local compose file: `docker compose -f docker-compose.local.yml`
+- **Backend commands** (pip install, alembic, python): `docker compose -f docker-compose.local.yml exec api <command>`
+- **Frontend commands** (npm, npx): `docker compose -f docker-compose.local.yml exec web <command>`
+- **Rebuild after dependency changes**: `docker compose -f docker-compose.local.yml up -d --build`
+- **View logs**: `docker compose -f docker-compose.local.yml logs -f api` or `logs -f web`
+- Do NOT run pip, python, npm, or node commands directly on the host
+
 ## Plans Directory (`docs/plans/`)
 
 - `brainstorming_*.md` — Raw ideas that need refinement. These are rough, exploratory notes.
